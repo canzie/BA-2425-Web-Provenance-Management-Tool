@@ -87,17 +87,17 @@ export default function Sidebar() {
   );
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen w-full flex flex-col">
+    <div className="p-4 bg-neutral-900 min-h-screen w-full flex flex-col">
       <div className="flex justify-center items-center mb-4">
         <button
-          className={`p-2 flex-1 ${filter === "currentTab" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          className={`p-2 flex-1 font-bold ${filter === "currentTab" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
           onClick={() => setFilter("currentTab")}
         >
           Page Annotations
         </button>
         <div className="border-l border-gray-400 h-full"></div>
         <button
-          className={`p-2 flex-1 ${filter === "all" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          className={`p-2 flex-1 font-bold ${filter === "all" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
           onClick={() => setFilter("all")}
         >
           All Annotations
@@ -128,7 +128,9 @@ export default function Sidebar() {
           ))}
         </ul>
       )}
-      <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <div className="fixed bottom-0 left-0 right-0 bg-neutral-900 p-4">
+        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      </div>
     </div>
   );
 }
