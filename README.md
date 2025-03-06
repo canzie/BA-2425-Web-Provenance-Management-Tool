@@ -1,9 +1,9 @@
-# Web Provenance Management Tool
+## Web Provenance Management Tool
 ...
 
-# How to run
+### How to run
 
-### Building the project
+Building the project
 
 ```
 npm install
