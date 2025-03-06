@@ -36,3 +36,5 @@ chrome.runtime.onInstalled.addListener(() => {
       console.log('Storage cleared');
     });
   }
+
+ 
