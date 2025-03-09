@@ -52,7 +52,7 @@ export default function AnnotationItem({
   return (
     <div
       key={index}
-      className={`p-2 bg-[#363636] rounded`}
+      className={`p-2 bg-[#363636] rounded overflow-hidden`}
     >
       {selectedIndex === index ? (
         <>
@@ -60,17 +60,17 @@ export default function AnnotationItem({
             type="text"
             value={editableTitle}
             onChange={(e) => setEditableTitle(e.target.value)}
-            className="w-full p-1 mb-1 border-b border-gray-400 rounded-none text-white text-xl font-bold"
+            className="w-full p-1 mb-1 border-b border-gray-400 rounded-none text-white text-xl font-bold break-words"
             onClick={(e) => {
               handleItemClick(index);
             }}
           />
           <div className="flex flex-wrap items-center mb-1">
             {editableTags.map((tag, i) => (
-              <span key={i} className="flex items-center rounded-full px-2 py-1 mr-2 mb-2" style={{ backgroundColor: tag.color, color: getTextColor(tag.color) }}>
+              <span key={i} className="flex items-center rounded-full px-2 py-1 mr-2 mb-2 break-all" style={{ backgroundColor: tag.color, color: getTextColor(tag.color) }}>
                 {tag.text}
                 <span
-                  className="ml-2 w-4 h-4 rounded-full cursor-pointer"
+                  className="ml-2 w-4 h-4 rounded-full cursor-pointer flex-shrink-0"
                   style={{ background: 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)' }}
                   onClick={() => document.getElementById(`colorPicker-${index}-${i}`).click()}
                 ></span>
@@ -90,12 +90,12 @@ export default function AnnotationItem({
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Add tag"
-                  className="flex-1 p-1 border-b border-gray-400 rounded-none text-white mr-2 mb-2"
+                  className="flex-1 p-1 border-b border-gray-400 rounded-none text-white mr-2 mb-2 break-words"
                   onClick={(e) => e.stopPropagation()}
                 />
                 <span
-                  className="ml-2 w-4 h-4 rounded-full cursor-pointer"
-                  style={{ background:  newTagColor }}
+                  className="ml-2 w-4 h-4 rounded-full cursor-pointer flex-shrink-0"
+                  style={{ background: newTagColor }}
                   onClick={() => document.getElementById("colorPicker").click()}
                 ></span>
                 <input
@@ -108,7 +108,7 @@ export default function AnnotationItem({
               </div>
             )}
             <button
-              className="p-1 ml-2 bg-violet-400 text-white rounded"
+              className="p-1 ml-2 bg-violet-400 text-white rounded flex-shrink-0"
               onClick={(e) => {
                 handleAddTag();
               }}
@@ -116,17 +116,17 @@ export default function AnnotationItem({
               +
             </button>
           </div>
-          <p             className="w-full p-1 my-2 text-white">
+          <p className="w-full p-1 my-2 text-white break-words">
             "<strong>{textObject.text}</strong>"
-            </p>
+          </p>
           <input
             type="text"
             value={editableMetadata}
             onChange={(e) => setEditableMetadata(e.target.value)}
-            className="w-full p-1 mb-1 border-b border-gray-400 text-white rounded-none"
+            className="w-full p-1 mb-1 border-b border-gray-400 text-white rounded-none break-words"
           />
-          <p className="text-white mt-4 opacity-40">{textObject.timestamp}</p>
-          <p className="text-white mt-1 mb-3"><a className="opacity-40" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
+          <p className="text-white mt-4 opacity-40 break-words">{textObject.timestamp}</p>
+          <p className="text-white mt-1 mb-3 break-words"><a className="opacity-40 break-all" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
           <div className="border-t border-gray-400 my-2 flex space-x-2">
             <button
               className="mt-2 p-1 bg-green-500 text-white rounded flex-1"
@@ -149,7 +149,7 @@ export default function AnnotationItem({
       ) : (
         <>
           <p
-            className="text-xl font-bold cursor-pointer text-white"
+            className="text-xl font-bold cursor-pointer text-white mb-3"
             onClick={() => handleItemClick(index)}
           >
             {textObject.title}

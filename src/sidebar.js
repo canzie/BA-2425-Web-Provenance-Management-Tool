@@ -79,51 +79,60 @@ export default function Sidebar() {
   const searchedTexts = filteredTexts.filter(textObject =>
     textObject.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     textObject.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.tags.join(", ").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.metadata.join(", ").toLowerCase().includes(searchQuery.toLowerCase())
+    textObject.metadata.join(", ").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    textObject.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    textObject.tags.map(tag => tag.text).join(" ").toLowerCase().includes(searchQuery.toLowerCase())
   );
-
   return (
-    <div className="p-4 bg-[#1E1E1E] min-h-screen w-full flex flex-col">
-      <div className="flex justify-center items-center mb-4">
-        <button
-          className={`p-2 flex-1 font-bold ${filter === "currentTab" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
-          onClick={() => setFilter("currentTab")}
-        >
-          Page Annotations
-        </button>
-        <div className="border-l border-gray-400 h-full"></div>
-        <button
-          className={`p-2 flex-1 font-bold ${filter === "all" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
-          onClick={() => setFilter("all")}
-        >
-          All Annotations
-        </button>
+    <div className="flex flex-col h-screen bg-[#1E1E1E]">
+      {/* Header */}
+      <div className="p-4">
+        <div className="flex justify-center items-center mb-4">
+          <button
+            className={`p-2 flex-1 font-bold ${filter === "currentTab" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
+            onClick={() => setFilter("currentTab")}
+          >
+            Page Annotations
+          </button>
+          <div className="border-l border-gray-400 h-full"></div>
+          <button
+            className={`p-2 flex-1 font-bold ${filter === "all" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
+            onClick={() => setFilter("all")}
+          >
+            All Annotations
+          </button>
+        </div>
       </div>
+
+      {/* Main content - scrollable area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-20">
       {searchedTexts.length === 0 ? (
-        <p className="text-gray-500">No annotations yet.</p>
-      ) : (
-        <ul className="mt-2 space-y-2 flex-grow">
-          {searchedTexts.map((textObject, index) => (
-            <AnnotationItem
-              key={index}
-              textObject={textObject}
-              index={index}
-              selectedIndex={selectedIndex}
-              handleItemClick={handleItemClick}
-              editableTitle={editableTitle}
-              setEditableTitle={setEditableTitle}
-              editableTags={editableTags}
-              setEditableTags={setEditableTags}
-              editableMetadata={editableMetadata}
-              setEditableMetadata={setEditableMetadata}
-              handleSave={handleSave}
-              handleDelete={handleDelete}
-            />
-          ))}
-        </ul>
-      )}
-      <div className="fixed bottom-0 left-0 right-0 bg-neutral-900 p-4">
+          <p className="text-gray-500">No annotations yet.</p>
+        ) : (
+          <ul className="space-y-2 w-full">
+            {searchedTexts.map((textObject, index) => (
+              <AnnotationItem
+                key={index}
+                textObject={textObject}
+                index={index}
+                selectedIndex={selectedIndex}
+                handleItemClick={handleItemClick}
+                editableTitle={editableTitle}
+                setEditableTitle={setEditableTitle}
+                editableTags={editableTags}
+                setEditableTags={setEditableTags}
+                editableMetadata={editableMetadata}
+                setEditableMetadata={setEditableMetadata}
+                handleSave={handleSave}
+                handleDelete={handleDelete}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Footer - fixed search bar */}
+      <div className="sticky bottom-0 bg-neutral-900 p-4 border-t border-gray-700 shadow-lg">
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       </div>
     </div>
