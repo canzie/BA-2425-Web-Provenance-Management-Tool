@@ -18,11 +18,16 @@ function highlightText(text) {
     while (walker.nextNode()) {
       const node = walker.currentNode;
       const match = node.nodeValue.match(regex);
+
+
       if (match) {
         const parent = node.parentNode;
         const parts = node.nodeValue.split(regex);
         const fragment = document.createDocumentFragment();
   
+        console.log(match);
+
+
         parts.forEach((part, index) => {
           fragment.appendChild(document.createTextNode(part));
           if (index < parts.length - 1) {

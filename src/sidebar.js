@@ -5,9 +5,8 @@ import AnnotationItem from "./AnnotationItem";
 export default function Sidebar() {
   const [savedTexts, setSavedTexts] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const [editableText, setEditableText] = useState("");
   const [editableTitle, setEditableTitle] = useState("");
-  const [editableTags, setEditableTags] = useState("");
+  const [editableTags, setEditableTags] = useState([]);
   const [editableMetadata, setEditableMetadata] = useState("");
   const [currentTabUrl, setCurrentTabUrl] = useState("");
   const [filter, setFilter] = useState("all");
@@ -48,9 +47,8 @@ export default function Sidebar() {
   const handleItemClick = (index) => {
     setSelectedIndex(selectedIndex === index ? null : index);
     if (selectedIndex !== index) {
-      setEditableText(savedTexts[index].text);
       setEditableTitle(savedTexts[index].title);
-      setEditableTags(savedTexts[index].tags.join(", "));
+      setEditableTags(savedTexts[index].tags);
       setEditableMetadata(savedTexts[index].metadata.join(", "));
     }
   };
@@ -65,9 +63,8 @@ export default function Sidebar() {
     const newSavedTexts = [...savedTexts];
     newSavedTexts[index] = {
       ...newSavedTexts[index],
-      text: editableText,
       title: editableTitle,
-      tags: editableTags.split(",").map(tag => tag.trim()),
+      tags: editableTags,
       metadata: editableMetadata.split(",").map(meta => meta.trim())
     };
     setSavedTexts(newSavedTexts);
@@ -87,7 +84,7 @@ export default function Sidebar() {
   );
 
   return (
-    <div className="p-4 bg-neutral-900 min-h-screen w-full flex flex-col">
+    <div className="p-4 bg-[#1E1E1E] min-h-screen w-full flex flex-col">
       <div className="flex justify-center items-center mb-4">
         <button
           className={`p-2 flex-1 font-bold ${filter === "currentTab" ? "bg-violet-400 text-white" : "bg-gray-200"}`}
@@ -118,8 +115,6 @@ export default function Sidebar() {
               setEditableTitle={setEditableTitle}
               editableTags={editableTags}
               setEditableTags={setEditableTags}
-              editableText={editableText}
-              setEditableText={setEditableText}
               editableMetadata={editableMetadata}
               setEditableMetadata={setEditableMetadata}
               handleSave={handleSave}

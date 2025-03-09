@@ -21,7 +21,7 @@ chrome.runtime.onInstalled.addListener(() => {
             timestamp: new Date().toISOString(),
             url: tab.url,
             metadata: ["sample metadata"],
-            tags: ["tag"] 
+            tags: [{text: "sample tag", color: "#000000"}] 
           };
           const newTexts = [...data.savedTexts, newTextObject];
           chrome.storage.local.set({ savedTexts: newTexts });
