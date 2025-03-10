@@ -62,10 +62,10 @@ export default function Sidebar() {
   const handleSave = (index) => {
     const newSavedTexts = [...savedTexts];
     newSavedTexts[index] = {
-      ...newSavedTexts[index],
-      title: editableTitle,
-      tags: editableTags,
-      metadata: editableMetadata.split(",").map(meta => meta.trim())
+        ...newSavedTexts[index],
+        title: editableTitle,
+        tags: editableTags, // Now only storing tag names
+        metadata: editableMetadata.split(",").map(meta => meta.trim())
     };
     setSavedTexts(newSavedTexts);
     chrome.storage.local.set({ savedTexts: newSavedTexts });

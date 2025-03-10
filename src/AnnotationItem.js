@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { tagManager } from './TagManager';
 
 export default function AnnotationItem({
   textObject,
@@ -9,7 +10,7 @@ export default function AnnotationItem({
   setEditableTitle,
   editableTags,
   setEditableTags,
-    editableMetadata,
+  editableMetadata,
   setEditableMetadata,
   handleSave,
   handleDelete
@@ -17,28 +18,45 @@ export default function AnnotationItem({
   const [newTag, setNewTag] = useState("");
   const [newTagColor, setNewTagColor] = useState("#ffffff");
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [tagSuggestions, setTagSuggestions] = useState([]);
+
+  const handleNewTagChange = (e) => {
+    const value = e.target.value;
+    setNewTag(value);
+
+    // Filter existing tags for suggestions
+    const suggestions = tagManager.getAllTags()
+      .filter(tag => tag.text.toLowerCase().includes(value.toLowerCase()));
+    setTagSuggestions(suggestions);
+  };
+
+  const handleTagSelect = (tag) => {
+    const updatedTags = [...editableTags, tag.text];
+    setEditableTags(updatedTags);
+    setNewTag("");
+    setTagSuggestions([]);
+    setIsAddingTag(false);
+  };
 
   const handleAddTag = () => {
     if (isAddingTag && newTag.trim() !== "") {
-      const updatedTags = [...editableTags, { text: newTag, color: newTagColor }];
+      const tag = tagManager.addTag(newTag.trim(), newTagColor);
+      const updatedTags = [...editableTags, tag.text];
       setEditableTags(updatedTags);
       setNewTag("");
       setNewTagColor("#ffffff");
     }
     setIsAddingTag(!isAddingTag);
+    setTagSuggestions([]);
   };
 
-  const handleTagColorChange = (index, color) => {
-    const updatedTags = editableTags.map((tag, i) => {
-      if (i === index) {
-        return { ...tag, color };
-      }
-      return tag;
-    });
-    setEditableTags(updatedTags);
+  const handleTagColorChange = (tagText, color) => {
+    tagManager.updateTagColor(tagText, color);
+    // Force re-render
+    setEditableTags([...editableTags]);
   };
 
-// background color's luminance (yoinked)
+  // background color's luminance (yoinked)
   const getTextColor = (bgColor) => {
     const color = bgColor.substring(1); // remove the #
     const rgb = parseInt(color, 16); // convert rrggbb to decimal
@@ -49,11 +67,33 @@ export default function AnnotationItem({
     return luma > 128 ? 'black' : 'white'; // return black for light colors, white for dark colors
   };
 
+  // Modified render method for tags
+  const renderTag = (tagText) => {
+    const tagInfo = tagManager.getTag(tagText);
+    if (!tagInfo) return null;
+
+    return (
+      <span className="flex items-center rounded-full px-2 py-1 mr-2 mb-2 break-all"
+        style={{ backgroundColor: tagInfo.color, color: getTextColor(tagInfo.color) }}>
+        {tagInfo.text}
+        <span
+          className="ml-2 w-4 h-4 rounded-full cursor-pointer flex-shrink-0"
+          style={{ background: 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)' }}
+          onClick={() => document.getElementById(`colorPicker-${tagInfo.text}`).click()}
+        ></span>
+        <input
+          type="color"
+          id={`colorPicker-${tagInfo.text}`}
+          value={tagInfo.color}
+          onChange={(e) => handleTagColorChange(tagInfo.text, e.target.value)}
+          className="hidden"
+        />
+      </span>
+    );
+  };
+
   return (
-    <div
-      key={index}
-      className={`p-2 bg-[#363636] rounded`}
-    >
+    <div className={`p-2 bg-[#363636] rounded overflow-hidden`}>
       {selectedIndex === index ? (
         <>
           <input
@@ -66,59 +106,55 @@ export default function AnnotationItem({
             }}
           />
           <div className="flex flex-wrap items-center mb-1">
-            {editableTags.map((tag, i) => (
-              <span key={i} className="flex items-center rounded-full px-2 py-1 mr-2 mb-2" style={{ backgroundColor: tag.color, color: getTextColor(tag.color) }}>
-                {tag.text}
-                <span
-                  className="ml-2 w-4 h-4 rounded-full cursor-pointer"
-                  style={{ background: 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)' }}
-                  onClick={() => document.getElementById(`colorPicker-${index}-${i}`).click()}
-                ></span>
-                <input
-                  type="color"
-                  id={`colorPicker-${index}-${i}`}
-                  value={tag.color}
-                  onChange={(e) => handleTagColorChange(i, e.target.value)}
-                  className="hidden"
-                />
-              </span>
-            ))}
+            {editableTags.map((tagText) => renderTag(tagText))}
             {isAddingTag && (
               <div className="relative flex items-center w-10/12">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add tag"
-                  className="flex-1 p-1 border-b border-gray-400 rounded-none text-white mr-2 mb-2"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span
-                  className="ml-2 w-4 h-4 rounded-full cursor-pointer"
-                  style={{ background:  newTagColor }}
-                  onClick={() => document.getElementById("colorPicker").click()}
-                ></span>
-                <input
-                  type="color"
-                  id="colorPicker"
-                  value={newTagColor}
-                  onChange={(e) => setNewTagColor(e.target.value)}
-                  className="hidden"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={handleNewTagChange}
+                    placeholder="Add tag"
+                    className="w-full p-1 border-b border-gray-400 rounded-none text-white mr-2 mb-2 break-words"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {tagSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 bg-neutral-800 rounded mt-1 shadow-lg z-10">
+                      {tagSuggestions.map((tag) => (
+                        <div
+                          key={tag.text}
+                          className="p-2 hover:bg-neutral-700 cursor-pointer flex items-center"
+                          onClick={() => handleTagSelect(tag)}
+                        >
+                          <span className="w-4 h-4 rounded-full mr-2"
+                            style={{ backgroundColor: tag.color }}></span>
+                          {tag.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Show color picker only for new tags */}
+                {tagSuggestions.length === 0 && (
+                  <input
+                    type="color"
+                    value={newTagColor}
+                    onChange={(e) => setNewTagColor(e.target.value)}
+                    className="w-6 h-6 p-0 border-none rounded-full cursor-pointer"
+                  />
+                )}
               </div>
             )}
             <button
-              className="p-1 ml-2 bg-violet-400 text-white rounded"
-              onClick={(e) => {
-                handleAddTag();
-              }}
+              className="p-1 ml-2 bg-violet-400 text-white rounded flex-shrink-0"
+              onClick={handleAddTag}
             >
               +
             </button>
           </div>
-          <p             className="w-full p-1 my-2 text-white">
+          <p className="w-full p-1 my-2 text-white">
             "<strong>{textObject.text}</strong>"
-            </p>
+          </p>
           <input
             type="text"
             value={editableMetadata}
@@ -155,11 +191,7 @@ export default function AnnotationItem({
             {textObject.title}
           </p>
           <div className="flex flex-wrap items-center mb-1">
-            {textObject.tags.map((tag, i) => (
-              <span key={i} className="bg-gray-300 rounded-full px-2 py-1 mr-2 mb-2" style={{ backgroundColor: tag.color, color: getTextColor(tag.color) }}>
-                {tag.text}
-              </span>
-            ))}
+            {textObject.tags.map((tagText) => renderTag(tagText))}
           </div>
           <p className="text-white mt-4"><a className="opacity-40" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
         </>
