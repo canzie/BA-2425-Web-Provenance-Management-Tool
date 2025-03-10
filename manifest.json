@@ -13,6 +13,15 @@
           "js": ["dist/contentScript.js"]
         }
       ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "dist/graphview_page.html",
+                "dist/graphview_page.js",
+                "dist/graphview.js"],
+            "matches": ["<all_urls>"]
+        }
+    ],
     "side_panel": {
       "default_path": "dist/index.html"
     },

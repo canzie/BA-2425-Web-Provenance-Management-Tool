@@ -4,8 +4,8 @@
   "description": "",
   "scripts": {
 
-    "start": "parcel watch src/contentScript.js src/sidebar.js src/index.html src/background.js --dist-dir dist --public-url ./ --config @parcel/config-webextension",
-    "build": "parcel build src/contentScript.js src/sidebar.js src/index.html src/background.js --dist-dir dist --public-url ./ --config @parcel/config-webextension"
+    "start": "parcel watch src/contentScript.js src/sidebar.js src/index.html src/background.js src/graphview_page.html src/graphview_page.js src/graphview.js --dist-dir dist --public-url ./ --config @parcel/config-webextension",
+    "build": "parcel build src/contentScript.js src/sidebar.js src/index.html src/background.js src/graphview_page.html src/graphview_page.js src/graphview.js --dist-dir dist --public-url ./ --config @parcel/config-webextension"
   },
   "keywords": [],
   "author": "",
