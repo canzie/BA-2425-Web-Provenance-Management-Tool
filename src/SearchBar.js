@@ -1,9 +1,9 @@
 import React from "react";
 
-export default function SearchBar({ searchQuery, setSearchQuery }) {
+export default function SearchBar({ searchQuery, setSearchQuery, width = "100%", graphView = false }) {
   const handleNewTab = () => {
     chrome.tabs.create({ 
-      url: chrome.runtime.getURL('graphview_page.html')
+      url: chrome.runtime.getURL('dist/graphview_page.html')
     });
   };
 
@@ -12,8 +12,29 @@ export default function SearchBar({ searchQuery, setSearchQuery }) {
     console.log('Settings clicked');
   };
 
+  // For graph view, use a simpler search UI
+  if (graphView) {
+    return (
+      <div className="w-full flex items-center gap-2" style={{ width }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search graph..."
+          className="flex-1 p-2 bg-white text-gray-800 rounded-md placeholder-gray-500"
+        />
+        <button type="submit" className="p-2 bg-white rounded-md">
+          <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // Original sidebar searchbar with buttons
   return (
-    <div className="w-full flex items-center gap-2">
+    <div className="w-full flex items-center gap-2" style={{ width }}>
       <input
         type="text"
         value={searchQuery}
