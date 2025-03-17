@@ -7,7 +7,11 @@ export default function GraphVisualizer({
     clusterDistance, 
     nodeSize, 
     searchTerm,
-    onNodeClick
+    onNodeClick,
+    centerForceStrength = 1,
+    repelForceStrength = -80, 
+    linkForceStrength = 0.7,
+    linkDistance = 60
 }) {
     const graphRef = useRef(null);
     const simulationRef = useRef(null);
@@ -92,18 +96,20 @@ export default function GraphVisualizer({
             
         // Create force simulation
         const simulation = forceSimulation(filteredData.nodes)
-            // Reduce link distance to bring connected nodes closer (was using clusterDistance directly)
+            // Update link force with customizable parameters
             .force("link", forceLink(filteredData.links)
                 .id(d => d.id)
-                .distance(d => Math.min(30, clusterDistance * 0.6)))
-            // Reduce repulsion strength to allow nodes to get closer 
-            .force("charge", forceManyBody().strength(-120))
-            .force("center", forceCenter(width / 2, height / 2))
-            // Reduce collision radius to allow closer packing 
-            .force("collide", forceCollide().radius(nodeSize * 1.2))
-            // Add a weak global attraction force to pull nodes toward the center
-            .force("x", d3.forceX(width / 2).strength(0.03))
-            .force("y", d3.forceY(height / 2).strength(0.03))
+                .strength(linkForceStrength * 0.01)
+                .distance(d => Math.min(linkDistance, clusterDistance * 0.8)))
+            // Make repel force customizable
+            .force("charge", forceManyBody().strength(repelForceStrength))
+            // Make center force customizable
+            .force("center", forceCenter(width / 2, height / 2).strength(centerForceStrength * 0.01))
+            // Increase collision radius slightly to prevent tight clustering
+            .force("collide", forceCollide().radius(nodeSize * 1.3))
+            // Reduce the strength of global attraction forces
+            .force("x", d3.forceX(width / 2).strength(0.02))
+            .force("y", d3.forceY(height / 2).strength(0.02))
             .on("tick", () => {
                 boundaryForce(); // Apply boundary constraints
                 
@@ -189,7 +195,7 @@ export default function GraphVisualizer({
             .data(filteredData.nodes)
             .enter()
             .append("text")
-            .text(d => d.id.length > 20 ? d.id.substring(0, 20) + "..." : d.id)
+            .text(d => d.id.length > 20 ? d.title.substring(0, 20) + "..." : d.title)
             .attr("font-size", "10px")
             .attr("dx", 12)
             .attr("dy", 4)

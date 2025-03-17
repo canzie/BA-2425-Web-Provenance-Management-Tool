@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import SearchBar from './SearchBar';
 import AnnotationsList from './components/AnnotationsList';
-import AnnotationDetail from './components/AnnotationDetail';
 import GraphControls from './components/GraphControls';
 import GraphVisualizer from './components/GraphVisualizer';
 
@@ -14,6 +13,14 @@ export default function GraphView() {
     const [selectedAnnotation, setSelectedAnnotation] = useState(null);
     const [filter, setFilter] = useState("all");
     
+
+      // New force control states
+    const [centerForceStrength, setCenterForceStrength] = useState(1);
+    const [repelForceStrength, setRepelForceStrength] = useState(-80);
+    const [linkForceStrength, setLinkForceStrength] = useState(70); 
+    const [linkDistance, setLinkDistance] = useState(60);
+    
+
     // Load annotations from localStorage
     useEffect(() => {
         const loadAnnotations = () => {
@@ -184,7 +191,6 @@ export default function GraphView() {
 
     return (
         <div className="flex w-screen h-screen bg-[#1E1E1E]">
-            {/* Left Sidebar - Fixed 15% width */}
             <div className="w-[20%] h-full border-r border-gray-700 bg-[#1E1E1E] flex flex-col overflow-auto">
                 <AnnotationsList 
                     annotations={annotations}
@@ -197,20 +203,21 @@ export default function GraphView() {
                 />
             </div>
             
-            {/* Main Graph Area */}
             <div className="w-[65%] h-full relative">
-                {/* Graph Visualization */}
                 <GraphVisualizer
                     graphData={graphData}
-                    clusterDistance={clusterDistance}
                     nodeSize={nodeSize}
+                    clusterDistance={clusterDistance}
                     searchTerm={searchTerm}
+                    centerForceStrength={centerForceStrength}
+                    repelForceStrength={repelForceStrength}
+                    linkForceStrength={linkForceStrength}
+                    linkDistance={linkDistance}
                     onNodeClick={setSelectedAnnotation}
-                />
+                    />
                 
 
                 
-                {/* Search Bar */}
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2" style={{ width: '500px' }}>
                     <SearchBar 
                         searchQuery={searchTerm} 
@@ -221,16 +228,20 @@ export default function GraphView() {
                 </div>
             </div>
             
-            {/* Right Control Panel - Fixed 15% width */}
             <div className="w-[15%] h-full bg-gray-800 border-l border-gray-700 overflow-auto">
-                <GraphControls
-                    graphData={graphData}
-                    clusterDistance={clusterDistance}
-                    setClusterDistance={setClusterDistance}
-                    nodeSize={nodeSize}
-                    setNodeSize={setNodeSize}
-                    allTags={getAllTags()}
-                    setSearchTerm={setSearchTerm}
+            <GraphControls
+                nodeSize={nodeSize}
+                setNodeSize={setNodeSize}
+                clusterDistance={clusterDistance}
+                setClusterDistance={setClusterDistance}
+                centerForceStrength={centerForceStrength}
+                setCenterForceStrength={setCenterForceStrength}
+                repelForceStrength={repelForceStrength}
+                setRepelForceStrength={setRepelForceStrength}
+                linkForceStrength={linkForceStrength}
+                setLinkForceStrength={setLinkForceStrength}
+                linkDistance={linkDistance}
+                setLinkDistance={setLinkDistance}
                 />
             </div>
         </div>

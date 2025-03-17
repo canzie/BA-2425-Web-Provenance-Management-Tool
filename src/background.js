@@ -23,8 +23,11 @@ chrome.runtime.onInstalled.addListener(() => {
       // Extract metadata first, then save the annotation with it
       extractPageMetadata(tab, (metadata) => {
         chrome.storage.local.get({ savedTexts: [] }, (data) => {
+          // Get the current count of annotations to use as index
+          const annotationIndex = data.savedTexts.length + 1;
+          
           const newTextObject = {
-              title: "Untitled",
+              title: `annotation-${annotationIndex}`,
               text: info.selectionText,
               timestamp: new Date().toISOString(),
               url: tab.url,
