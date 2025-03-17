@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-
-    "start": "parcel watch src/contentScript.js src/sidebar.js src/index.html src/background.js --dist-dir dist --public-url ./ --config @parcel/config-webextension",
-    "build": "parcel build src/contentScript.js src/sidebar.js src/index.html src/background.js --dist-dir dist --public-url ./ --config @parcel/config-webextension"
+    "start": "parcel watch src/contentScript.js src/sidebar.js src/index.html src/background.js src/graphview_page.html src/graphview_page.js src/graphview.js --dist-dir dist --public-url ./ --config @parcel/config-webextension",
+    "build": "parcel build src/contentScript.js src/sidebar.js src/index.html src/background.js src/graphview_page.html src/graphview_page.js src/graphview.js --dist-dir dist --public-url ./ --config @parcel/config-webextension"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +12,8 @@
   "dependencies": {
     "@parcel/config-webextension": "^2.13.3",
     "@parcel/transformer-postcss": "^2.13.3",
+    "d3": "^7.9.0",
+    "d3-force": "^3.0.0",
     "parcel": "^2.13.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

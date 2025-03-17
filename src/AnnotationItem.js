@@ -93,14 +93,17 @@ export default function AnnotationItem({
   };
 
   return (
-    <div className={`p-2 bg-[#363636] rounded overflow-hidden`}>
+    <div
+      key={index}
+      className={`p-2 bg-[#363636] rounded overflow-hidden`}
+    >
       {selectedIndex === index ? (
         <>
           <input
             type="text"
             value={editableTitle}
             onChange={(e) => setEditableTitle(e.target.value)}
-            className="w-full p-1 mb-1 border-b border-gray-400 rounded-none text-white text-xl font-bold"
+            className="w-full p-1 mb-1 border-b border-gray-400 rounded-none text-white text-xl font-bold break-words"
             onClick={(e) => {
               handleItemClick(index);
             }}
@@ -159,10 +162,10 @@ export default function AnnotationItem({
             type="text"
             value={editableMetadata}
             onChange={(e) => setEditableMetadata(e.target.value)}
-            className="w-full p-1 mb-1 border-b border-gray-400 text-white rounded-none"
+            className="w-full p-1 mb-1 border-b border-gray-400 text-white rounded-none break-words"
           />
-          <p className="text-white mt-4 opacity-40">{textObject.timestamp}</p>
-          <p className="text-white mt-1 mb-3"><a className="opacity-40" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
+          <p className="text-white mt-4 opacity-40 break-words">{textObject.timestamp}</p>
+          <p className="text-white mt-1 mb-3 break-words"><a className="opacity-40 break-all" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
           <div className="border-t border-gray-400 my-2 flex space-x-2">
             <button
               className="mt-2 p-1 bg-green-500 text-white rounded flex-1"
@@ -185,7 +188,7 @@ export default function AnnotationItem({
       ) : (
         <>
           <p
-            className="text-xl font-bold cursor-pointer text-white"
+            className="text-xl font-bold cursor-pointer text-white mb-3"
             onClick={() => handleItemClick(index)}
           >
             {textObject.title}
