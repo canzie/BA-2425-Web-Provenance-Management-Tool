@@ -5,7 +5,7 @@ import GraphControls from './components/GraphControls';
 import GraphVisualizer from './components/GraphVisualizer';
 
 export default function GraphView() {
-    const [clusterDistance, setClusterDistance] = useState(0.4);
+    const [clusterDistance, setClusterDistance] = useState(50);
     const [nodeSize, setNodeSize] = useState(3);
     const [searchTerm, setSearchTerm] = useState('');
     const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -228,7 +228,7 @@ export default function GraphView() {
                 </div>
             </div>
             
-            <div className="w-[15%] h-full bg-gray-800 border-l border-gray-700 overflow-auto">
+            <div className="w-[15%] h-full bg-[#363636] border-l border-gray-700 overflow-auto">
             <GraphControls
                 nodeSize={nodeSize}
                 setNodeSize={setNodeSize}

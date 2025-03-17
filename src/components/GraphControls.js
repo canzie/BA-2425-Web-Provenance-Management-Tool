@@ -16,7 +16,7 @@ export default function GraphControls({
   setLinkDistance
 }) {
   return (
-    <div className="graph-controls p-4 bg-gray-800 rounded-md">
+    <div className="graph-controls p-4 bg-[#363636] rounded-md">
       <h3 className="text-white text-lg font-medium mb-4">Graph Controls</h3>
       
       {/* Existing controls */}
