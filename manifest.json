@@ -10,7 +10,9 @@
     "content_scripts": [
         {
           "matches": ["<all_urls>"],
-          "js": ["dist/contentScript.js"]
+          "js": ["dist/contentScript.js"],
+          "all_frames": false,
+          "run_at": "document_end"
         }
       ],
     "web_accessible_resources": [
@@ -18,7 +20,12 @@
             "resources": [
                 "dist/graphview_page.html",
                 "dist/graphview_page.js",
-                "dist/graphview.js"],
+                "dist/graphview.js",
+                "dist/rangy-serializer.js",
+                "dist/rangy-core.js",
+                "dist/rangy-classapplier.js",
+                "dist/rangy-highlighter.js"
+            ],
             "matches": ["<all_urls>"]
         }
     ],

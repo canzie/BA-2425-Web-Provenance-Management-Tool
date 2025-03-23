@@ -1,1 +1,26 @@
 @import "tailwindcss";
+@tailwind utilities;
+
+/* Highlighted text styles */
+.highlighted-text {
+  background-color: #ffff0099 !important; /* Semi-transparent yellow */
+  color: currentColor !important; /* Use the current text color instead of forcing black */
+  border-radius: 2px !important;
+  padding: 0 1px !important;
+  display: inline !important;
+  position: relative !important;
+  box-decoration-break: clone !important;
+  -webkit-box-decoration-break: clone !important;
+  z-index: 9 !important; /* Lower z-index to avoid breaking UI controls */
+  pointer-events: auto !important;
+  /* Don't affect the layout */
+  margin: 0 !important;
+  text-decoration: none !important;
+}
+
+/* Add a subtle animation when hovering */
+.highlighted-text:hover {
+  box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.3) !important;
+  transition: box-shadow 0.2s ease-in-out !important;
+}
+
