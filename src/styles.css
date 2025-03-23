@@ -24,3 +24,15 @@
   transition: box-shadow 0.2s ease-in-out !important;
 }
 
+/* Animation for scrolled-to highlights */
+@keyframes highlight-flash {
+  0% { background-color: #ffff0099; }
+  50% { background-color: #ffaa0099; }
+  100% { background-color: #ffff0099; }
+}
+
+.highlight-flash {
+  animation: highlight-flash 1s ease-in-out 3;
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.8);
+}
+

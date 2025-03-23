@@ -43,13 +43,43 @@ function loadAndProcessAnnotations() {
   chrome.storage.local.get("savedTexts", (data) => {
     const savedTexts = data.savedTexts || [];
     const currentUrl = window.location.href;
+    
+    // Remove the hash from the current URL for comparison
+    const normalizedCurrentUrl = currentUrl.split('#')[0];
 
-    // Filter annotations for the current page
-    currentAnnotations = savedTexts.filter(textObject => textObject.url === currentUrl);
+    // Filter annotations for the current page, ignoring hash fragments
+    currentAnnotations = savedTexts.filter(textObject => {
+      // Normalize the annotation URL by removing hash
+      const annotationUrl = textObject.url.split('#')[0];
+      return annotationUrl === normalizedCurrentUrl;
+    });
     
     // Process the annotations
     processAnnotations();
+    
+    // Check if URL has a hash for annotation ID to scroll to
+    if (window.location.hash) {
+      const annotationId = window.location.hash.substring(1);
+      setTimeout(() => {
+        scrollToAnnotation(annotationId);
+      }, 500); // Delay slightly to ensure rendering is complete
+    }
   });
+}
+
+// Function to scroll to an annotation by ID
+function scrollToAnnotation(annotationId) {
+  const element = document.getElementById(annotationId);
+  if (element) {
+    // Scroll the element into view with smooth behavior
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Add a temporary flash effect to make it easier to spot
+    element.classList.add('highlight-flash');
+    setTimeout(() => {
+      element.classList.remove('highlight-flash');
+    }, 2000);
+  }
 }
 
 // Setup mutation observer to detect dynamic content
@@ -110,6 +140,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // Send response
     sendResponse({ success: true });
+  } else if (message.action === 'scrollToAnnotation' && message.annotationId) {
+    // Scroll to the specified annotation
+    scrollToAnnotation(message.annotationId);
+    sendResponse({ success: true });
   }
 });
 
@@ -125,33 +159,47 @@ if (document.readyState === "loading") {
 }
 
 // Function to highlight text using Rangy
-function highlightWithRangy(serializedSelection, text) {
+function highlightWithRangy(serializedSelection, text, annotationId) {
   try {
     // Deserialize the range
     const range = deserializeRange(serializedSelection);
     if (!range) {
       console.warn('Failed to deserialize range, falling back to text-based highlight');
-      highlightText(text);
+      highlightText(text, annotationId);
       return;
     }
 
+    // Create a wrapper span to hold the highlight elements
+    const wrapper = document.createElement('span');
+    wrapper.id = annotationId; // Set the ID for later retrieval
+    
     // Apply highlighting
     highlightClassApplier.applyToRange(range);
+    
+    // Add data attribute to all spans created by the highlighter
+    const highlightSpans = document.querySelectorAll('.highlighted-text:not([data-annotation-id])');
+    highlightSpans.forEach(span => {
+      span.setAttribute('data-annotation-id', annotationId);
+      // Make the first one have the actual ID for scrolling
+      if (!document.getElementById(annotationId)) {
+        span.id = annotationId;
+      }
+    });
     
     // Clean up
     range.detach();
   } catch (err) {
     console.error('Error highlighting with Rangy:', err);
     // Fallback to text-based highlight
-    highlightText(text);
+    highlightText(text, annotationId);
   }
 }
 
 // Function to highlight text using DOM path
-function highlightByDomPath(domPath, text) {
+function highlightByDomPath(domPath, text, annotationId) {
   if (!domPath || !domPath.startPath || !domPath.endPath) {
     console.warn('Invalid DOM path, falling back to text-based highlight');
-    highlightText(text);
+    highlightText(text, annotationId);
     return;
   }
 
@@ -169,7 +217,7 @@ function highlightByDomPath(domPath, text) {
     
     if (!startContainer || !endContainer) {
       console.warn('Could not resolve DOM path, falling back to text-based highlight');
-      highlightText(text);
+      highlightText(text, annotationId);
       return;
     }
     
@@ -182,15 +230,25 @@ function highlightByDomPath(domPath, text) {
     rangyRange.setStart(range.startContainer, range.startOffset);
     rangyRange.setEnd(range.endContainer, range.endOffset);
     highlightClassApplier.applyToRange(rangyRange);
+    
+    // Add data attribute to all spans created by the highlighter
+    const highlightSpans = document.querySelectorAll('.highlighted-text:not([data-annotation-id])');
+    highlightSpans.forEach(span => {
+      span.setAttribute('data-annotation-id', annotationId);
+      // Make the first one have the actual ID for scrolling
+      if (!document.getElementById(annotationId)) {
+        span.id = annotationId;
+      }
+    });
   } catch (err) {
     console.error('Error highlighting by DOM path:', err);
     // Fallback to text-based highlight
-    highlightText(text);
+    highlightText(text, annotationId);
   }
 }
 
 // Function to highlight text using text search
-function highlightText(text) {
+function highlightText(text, annotationId) {
   if (!text || text.length < 2) return;
   
   // Try to use Rangy finder
@@ -202,10 +260,22 @@ function highlightText(text) {
       // Find all instances of the text with a limit
       let count = 0;
       let currentRange = foundRange;
+      let firstSpan = null;
       
       do {
         // Apply highlighting to each found range
         highlightClassApplier.applyToRange(currentRange);
+        
+        // Get the span element that was just created
+        const highlightSpans = document.querySelectorAll('.highlighted-text:not([data-annotation-id])');
+        highlightSpans.forEach(span => {
+          span.setAttribute('data-annotation-id', annotationId);
+          if (!firstSpan) {
+            firstSpan = span;
+            span.id = annotationId; // Set ID on the first span only
+          }
+        });
+        
         // Move to next match
         currentRange.collapse(false);
         count++;
@@ -237,9 +307,11 @@ function highlightText(text) {
   const regex = new RegExp(escapeRegExp(text), 'gi');
   const highlightSpan = document.createElement('span');
   highlightSpan.className = "highlighted-text";
+  highlightSpan.setAttribute('data-annotation-id', annotationId);
 
   let highlightCount = 0;
   const maxHighlights = 100; // Limit total highlights to prevent performance issues
+  let firstHighlightSet = false;
 
   while (walker.nextNode() && highlightCount < maxHighlights) {
     const node = walker.currentNode;
@@ -264,6 +336,13 @@ function highlightText(text) {
         if (index < parts.length - 1 && index < matches.length) {
           const highlight = highlightSpan.cloneNode(true);
           highlight.textContent = matches[index];
+          
+          // Set ID only on the first highlight to avoid duplicates
+          if (!firstHighlightSet) {
+            highlight.id = annotationId;
+            firstHighlightSet = true;
+          }
+          
           fragment.appendChild(highlight);
           highlightCount++;
         }
@@ -277,15 +356,23 @@ function highlightText(text) {
 
 // Function to highlight a specific annotation
 function highlightAnnotation(annotation) {
+  // Generate a unique ID for this annotation if it doesn't have one already
+  const annotationId = annotation.id || `annotation-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  
+  // Store the ID with the annotation
+  if (!annotation.id) {
+    annotation.id = annotationId;
+  }
+
   if (annotation.useRangy && annotation.domPath && annotation.domPath.rangySelection) {
     // Use Rangy serializer for highlighting
-    highlightWithRangy(annotation.domPath.rangySelection, annotation.text);
+    highlightWithRangy(annotation.domPath.rangySelection, annotation.text, annotationId);
   } else if (annotation.domPath) {
     // Use custom DOM path method
-    highlightByDomPath(annotation.domPath, annotation.text);
+    highlightByDomPath(annotation.domPath, annotation.text, annotationId);
   } else {
     // Fallback to text search method
-    highlightText(annotation.text);
+    highlightText(annotation.text, annotationId);
   }
 }
 

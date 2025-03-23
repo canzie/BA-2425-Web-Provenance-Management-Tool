@@ -65,11 +65,18 @@ function saveAnnotation(tab, info, metadata, domPath, useRangy) {
     // Get the current count of annotations to use as index
     const annotationIndex = data.savedTexts.length + 1;
     
+    // Generate a unique ID for the annotation
+    const annotationId = `annotation-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Normalize the URL by removing any hash
+    const normalizedUrl = tab.url.split('#')[0];
+    
     const newTextObject = {
+        id: annotationId,
         title: `annotation-${annotationIndex}`,
         text: info.selectionText,
         timestamp: new Date().toISOString(),
-        url: tab.url,
+        url: normalizedUrl,
         metadata: metadata || ["sample metadata"],
         tags: [],
         domPath: domPath,

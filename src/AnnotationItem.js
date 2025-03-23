@@ -106,6 +106,28 @@ export default function AnnotationItem({
     );
   };
 
+  // Add a handler for link clicks
+  const handleLinkClick = (e, url, annotationId) => {
+    e.preventDefault();
+    
+    // Normalize URLs by removing any existing hash fragments
+    const normalizedCurrentUrl = window.location.href.split('#')[0];
+    const normalizedTargetUrl = url.split('#')[0];
+    
+    if (normalizedCurrentUrl === normalizedTargetUrl) {
+      // We're on the same page, just scroll to the annotation
+      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: 'scrollToAnnotation',
+          annotationId: annotationId
+        });
+      });
+    } else {
+      // Navigate to the page with the annotation ID in the hash
+      chrome.tabs.update({url: `${normalizedTargetUrl}#${annotationId}`});
+    }
+  };
+
   return (
     <div
       key={index}
@@ -177,7 +199,13 @@ export default function AnnotationItem({
           <div className="mt-2 text-xs text-gray-400">
             <p className="break-words opacity-75">{textObject.timestamp}</p>
             <p className="break-words opacity-75">
-              <a className="hover:underline break-all" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a>
+              <a 
+                className="hover:underline break-all" 
+                href={textObject.url} 
+                onClick={(e) => handleLinkClick(e, textObject.url, textObject.id)}
+              >
+                {textObject.url}
+              </a>
             </p>
           </div>
           
@@ -241,6 +269,15 @@ export default function AnnotationItem({
             {textObject.text && textObject.text.length > 70 ? 
               textObject.text.substring(0, 70) + "..." : 
               textObject.text}
+          </p>
+          <p className="text-xs text-gray-400 truncate mt-2">
+            <a 
+              className="hover:underline break-all" 
+              href={textObject.url} 
+              onClick={(e) => handleLinkClick(e, textObject.url, textObject.id)}
+            >
+              Go to annotation
+            </a>
           </p>
         </>
       )}
