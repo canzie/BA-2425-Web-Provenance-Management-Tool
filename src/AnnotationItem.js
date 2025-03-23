@@ -19,6 +19,7 @@ export default function AnnotationItem({
   const [newTagColor, setNewTagColor] = useState("#ffffff");
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagSuggestions, setTagSuggestions] = useState([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleNewTagChange = (e) => {
     const value = e.target.value;
@@ -55,6 +56,11 @@ export default function AnnotationItem({
     // Force re-render
     setEditableTags([...editableTags]);
   };
+  
+  const handleRemoveTag = (tagToRemove) => {
+    const updatedTags = editableTags.filter(tag => tag !== tagToRemove);
+    setEditableTags(updatedTags);
+  };
 
   // background color's luminance (yoinked)
   const getTextColor = (bgColor) => {
@@ -88,6 +94,14 @@ export default function AnnotationItem({
           onChange={(e) => handleTagColorChange(tagInfo.text, e.target.value)}
           className="hidden"
         />
+        {selectedIndex === index && (
+          <span
+            className="ml-1 cursor-pointer text-sm hover:text-red-500"
+            onClick={() => handleRemoveTag(tagText)}
+          >
+            ×
+          </span>
+        )}
       </span>
     );
   };
@@ -95,7 +109,7 @@ export default function AnnotationItem({
   return (
     <div
       key={index}
-      className={`p-2 bg-[#363636] rounded overflow-hidden`}
+      className={`p-2 bg-[#363636] rounded overflow-hidden ${selectedIndex === index ? 'ring-2 ring-violet-400' : ''}`}
     >
       {selectedIndex === index ? (
         <>
@@ -149,7 +163,7 @@ export default function AnnotationItem({
               </div>
             )}
             <button
-              className="p-1 ml-2 bg-violet-400 text-white rounded flex-shrink-0"
+              className="p-1 ml-2 bg-violet-400 hover:bg-violet-700 text-white rounded flex-shrink-0 transition-colors shadow-sm"
               onClick={handleAddTag}
             >
               +
@@ -158,17 +172,40 @@ export default function AnnotationItem({
           <p className="w-full p-1 my-2 text-white">
             "<strong>{textObject.text}</strong>"
           </p>
-          <input
-            type="text"
-            value={editableMetadata}
-            onChange={(e) => setEditableMetadata(e.target.value)}
-            className="w-full p-1 mb-1 border-b border-gray-400 text-white rounded-none break-words"
-          />
-          <p className="text-white mt-4 opacity-40 break-words">{textObject.timestamp}</p>
-          <p className="text-white mt-1 mb-3 break-words"><a className="opacity-40 break-all" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
-          <div className="border-t border-gray-400 my-2 flex space-x-2">
+          
+          {/* Timestamp and URL - always visible */}
+          <div className="mt-2 text-xs text-gray-400">
+            <p className="break-words opacity-75">{textObject.timestamp}</p>
+            <p className="break-words opacity-75">
+              <a className="hover:underline break-all" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a>
+            </p>
+          </div>
+          
+          {/* Show/hide advanced options button */}
+          <button
+            className="mt-2 p-1 text-sm text-violet-300 hover:text-violet-100 underline flex items-center"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            {showAdvanced ? 'Hide Metadata' : 'Show Metadata'}
+            <span className="ml-1">{showAdvanced ? '▲' : '▼'}</span>
+          </button>
+          
+          {/* Advanced options section - metadata only */}
+          {showAdvanced && (
+            <div className="mt-2 p-2 bg-neutral-700 rounded">
+              <label className="block text-sm text-white mb-1">Metadata (comma separated):</label>
+              <input
+                type="text"
+                value={editableMetadata}
+                onChange={(e) => setEditableMetadata(e.target.value)}
+                className="w-full p-1 mb-1 border-b border-gray-400 text-white bg-neutral-800 rounded-none break-words"
+              />
+            </div>
+          )}
+          
+          <div className="border-t border-gray-600 mt-4 pt-2 flex space-x-2">
             <button
-              className="mt-2 p-1 bg-green-500 text-white rounded flex-1"
+              className="p-1.5 bg-violet-400 hover:bg-violet-700 text-white rounded flex-1 transition-colors shadow-md"
               onClick={(e) => {
                 handleSave(index);
               }}
@@ -176,7 +213,7 @@ export default function AnnotationItem({
               Save
             </button>
             <button
-              className="mt-2 p-1 bg-red-500 text-white rounded flex-1"
+              className="p-1.5 bg-[#444444] hover:bg-[#555555] text-white rounded flex-1 transition-colors border border-gray-600 shadow-md"
               onClick={(e) => {
                 handleDelete(index);
               }}
@@ -194,9 +231,17 @@ export default function AnnotationItem({
             {textObject.title}
           </p>
           <div className="flex flex-wrap items-center mb-1">
-            {textObject.tags.map((tagText) => renderTag(tagText))}
+            {textObject.tags && Array.isArray(textObject.tags) && 
+              textObject.tags.map((tagText, i) => (
+                <span key={i}>{renderTag(tagText)}</span>
+              ))
+            }
           </div>
-          <p className="text-white mt-4"><a className="opacity-40" href={textObject.url} target="_blank" rel="noopener noreferrer">{textObject.url}</a></p>
+          <p className="text-sm text-gray-400 truncate mt-2">
+            {textObject.text && textObject.text.length > 70 ? 
+              textObject.text.substring(0, 70) + "..." : 
+              textObject.text}
+          </p>
         </>
       )}
     </div>

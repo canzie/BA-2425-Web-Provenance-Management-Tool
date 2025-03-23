@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export default function GraphControls({
   clusterDistance,
@@ -15,6 +15,39 @@ export default function GraphControls({
   linkDistance,
   setLinkDistance
 }) {
+  
+  // Ensure integer values for better handling
+  const handleCenterForceChange = (e) => {
+    const value = parseFloat(e.target.value);
+    setCenterForceStrength(value);
+  };
+  
+  const handleRepelForceChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setRepelForceStrength(value);
+  };
+  
+  const handleLinkStrengthChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setLinkForceStrength(value);
+  };
+  
+  const handleLinkDistanceChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setLinkDistance(value);
+  };
+  
+  const saveGraphControlsToLocalStorage = () => {
+    localStorage.setItem('graphControls', JSON.stringify({
+      nodeSize,
+      clusterDistance,
+      centerForceStrength,
+      repelForceStrength,
+      linkForceStrength,
+      linkDistance
+    }));
+  };
+  
   return (
     <div className="graph-controls p-4 bg-[#363636] rounded-md">
       <h3 className="text-white text-lg font-medium mb-4">Graph Controls</h3>
@@ -29,8 +62,8 @@ export default function GraphControls({
           min="2"
           max="15"
           value={nodeSize}
-          onChange={(e) => setNodeSize(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {setNodeSize(Number(e.target.value)); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
       
@@ -43,8 +76,8 @@ export default function GraphControls({
           min="30"
           max="200"
           value={clusterDistance}
-          onChange={(e) => setClusterDistance(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {setClusterDistance(Number(e.target.value)); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
       
@@ -58,8 +91,8 @@ export default function GraphControls({
           max="10"
           step="0.1"
           value={centerForceStrength}
-          onChange={(e) => setCenterForceStrength(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {handleCenterForceChange(e); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
       
@@ -72,8 +105,8 @@ export default function GraphControls({
           min="-300"
           max="-10"
           value={repelForceStrength}
-          onChange={(e) => setRepelForceStrength(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {handleRepelForceChange(e); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
       
@@ -86,8 +119,8 @@ export default function GraphControls({
           min="1"
           max="100"
           value={linkForceStrength}
-          onChange={(e) => setLinkForceStrength(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {handleLinkStrengthChange(e); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
       
@@ -100,10 +133,25 @@ export default function GraphControls({
           min="20"
           max="150"
           value={linkDistance}
-          onChange={(e) => setLinkDistance(Number(e.target.value))}
-          className="w-full"
+          onChange={(e) => {handleLinkDistanceChange(e); saveGraphControlsToLocalStorage()}}
+          className="w-full accent-violet-400"
         />
       </div>
+      
+      {/* Reset button */}
+      <button
+        className="w-full py-2 bg-violet-500 text-white rounded hover:bg-violet-600 transition-colors"
+        onClick={() => {
+          setNodeSize(5);
+          setClusterDistance(80);
+          setCenterForceStrength(1);
+          setRepelForceStrength(-100);
+          setLinkForceStrength(50);
+          setLinkDistance(60);
+        }}
+      >
+        Reset to Defaults
+      </button>
     </div>
   );
 } 

@@ -76,8 +76,6 @@ export default function GraphVisualizer({
         // Handle search filter
         let filteredData = { ...graphData };
         
-
-        
         // Add containment force to keep nodes within boundaries
         const boundaryForce = () => {
             const padding = 50; // Padding from the edges

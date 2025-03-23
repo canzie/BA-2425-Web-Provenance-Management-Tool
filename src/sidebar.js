@@ -11,6 +11,7 @@ export default function Sidebar() {
   const [currentTabUrl, setCurrentTabUrl] = useState("");
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [savingStatus, setSavingStatus] = useState(""); // For showing save status
 
   useEffect(() => {
     // Fetch saved texts
@@ -28,7 +29,9 @@ export default function Sidebar() {
     // Get the current tab URL
     const updateCurrentTabUrl = () => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        setCurrentTabUrl(tabs[0].url);
+        if (tabs && tabs[0]) {
+          setCurrentTabUrl(tabs[0].url);
+        }
       });
     };
 
@@ -47,29 +50,94 @@ export default function Sidebar() {
   const handleItemClick = (index) => {
     setSelectedIndex(selectedIndex === index ? null : index);
     if (selectedIndex !== index) {
-      setEditableTitle(savedTexts[index].title);
-      setEditableTags(savedTexts[index].tags);
-      setEditableMetadata(savedTexts[index].metadata.join(", "));
+      const item = savedTexts[index];
+      setEditableTitle(item.title || "");
+      
+      // Handle different tag formats
+      if (item.tags) {
+        if (Array.isArray(item.tags)) {
+          setEditableTags(item.tags);
+        } else {
+          console.error("Tags is not an array:", item.tags);
+          setEditableTags([]);
+        }
+      } else {
+        setEditableTags([]);
+      }
+      
+      // Handle metadata
+      setEditableMetadata(item.metadata ? item.metadata.join(", ") : "");
     }
   };
 
   const handleDelete = (index) => {
     const newSavedTexts = savedTexts.filter((_, i) => i !== index);
     setSavedTexts(newSavedTexts);
-    chrome.storage.local.set({ savedTexts: newSavedTexts });
+    chrome.storage.local.set({ savedTexts: newSavedTexts }, () => {
+      if (chrome.runtime.lastError) {
+        console.error("Error deleting item:", chrome.runtime.lastError);
+        setSavingStatus("Error: Could not delete");
+      } else {
+        setSavingStatus("Deleted successfully");
+        setTimeout(() => setSavingStatus(""), 2000);
+      }
+    });
+    setSelectedIndex(null);
   };
 
   const handleSave = (index) => {
-    const newSavedTexts = [...savedTexts];
-    newSavedTexts[index] = {
+    try {
+      setSavingStatus("Saving...");
+      
+      const newSavedTexts = [...savedTexts];
+      
+      // Validate tags
+      let processedTags = editableTags;
+      if (!Array.isArray(processedTags)) {
+        try {
+          // If it's a string, try to parse it as JSON
+          if (typeof editableTags === 'string') {
+            processedTags = JSON.parse(editableTags);
+          } else {
+            processedTags = [];
+          }
+        } catch (e) {
+          console.error("Error parsing tags:", e);
+          processedTags = [];
+        }
+      }
+      
+      // Process metadata
+      const processedMetadata = typeof editableMetadata === 'string' 
+        ? editableMetadata.split(",").map(meta => meta.trim()).filter(Boolean)
+        : [];
+      
+      newSavedTexts[index] = {
         ...newSavedTexts[index],
-        title: editableTitle,
-        tags: editableTags, // Now only storing tag names
-        metadata: editableMetadata.split(",").map(meta => meta.trim())
-    };
-    setSavedTexts(newSavedTexts);
-    chrome.storage.local.set({ savedTexts: newSavedTexts });
-    setSelectedIndex(null);
+        title: editableTitle || "Untitled",
+        tags: processedTags,
+        metadata: processedMetadata
+      };
+      
+      // Update local state first for immediate feedback
+      setSavedTexts(newSavedTexts);
+      
+      // Then update storage
+      chrome.storage.local.set({ savedTexts: newSavedTexts }, () => {
+        if (chrome.runtime.lastError) {
+          console.error("Error saving:", chrome.runtime.lastError);
+          setSavingStatus("Error: Could not save");
+        } else {
+          setSavingStatus("Saved successfully");
+          setTimeout(() => setSavingStatus(""), 2000);
+        }
+      });
+      
+      setSelectedIndex(null);
+    } catch (error) {
+      console.error("Error in handleSave:", error);
+      setSavingStatus("Error: " + error.message);
+    }
   };
 
   const filteredTexts = filter === "currentTab"
@@ -77,12 +145,16 @@ export default function Sidebar() {
     : savedTexts;
 
   const searchedTexts = filteredTexts.filter(textObject =>
-    textObject.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.metadata.join(", ").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    textObject.tags.map(tag => tag.text).join(" ").toLowerCase().includes(searchQuery.toLowerCase())
+    textObject.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    textObject.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    textObject.metadata?.join(", ").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    textObject.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (Array.isArray(textObject.tags) && textObject.tags.some(tag => {
+      const tagText = typeof tag === 'string' ? tag : (tag.text || '');
+      return tagText.toLowerCase().includes(searchQuery.toLowerCase());
+    }))
   );
+  
   return (
     <div className="flex flex-col h-screen bg-[#1E1E1E]">
       {/* Header */}
@@ -103,6 +175,13 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Status message */}
+      {savingStatus && (
+        <div className={`p-2 text-center ${savingStatus.includes('Error') ? 'bg-red-500' : 'bg-green-500'} text-white`}>
+          {savingStatus}
+        </div>
+      )}
 
       {/* Main content - scrollable area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-20">
