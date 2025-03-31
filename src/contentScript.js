@@ -96,7 +96,8 @@ function setupMutationObserver() {
           
           // Skip script tags
           if (node.nodeName && node.nodeName.toLowerCase() === 'script') continue;
-          
+          if (node.nodeName && node.nodeName.toLowerCase() === 'iframe') continue;
+
           // If it's an element node with text content or a text node
           if ((node.nodeType === Node.ELEMENT_NODE && node.textContent.trim()) || 
               node.nodeType === Node.TEXT_NODE) {
