@@ -2,17 +2,19 @@
     "manifest_version": 3,
     "name": "React Sidebar Extension",
     "version": "1.0",
-    "permissions": ["contextMenus", "storage", "sidePanel", "tabs", "activeTab", "scripting", "downloads", "clipboardWrite"],
+    "description": "Save annotations with text and images across websites",
+    "permissions": ["contextMenus", "storage", "sidePanel", "tabs", "activeTab", "scripting"],
     "host_permissions": ["<all_urls>"],
     "background": {
-      "service_worker": "dist/background.js"
+      "service_worker": "dist/background.js",
+      "type": "module"
     },
     "content_scripts": [
         {
           "matches": ["<all_urls>"],
           "js": ["dist/contentScript.js"],
           "all_frames": false,
-          "run_at": "document_end"
+          "run_at": "document_idle"
         }
       ],
     "web_accessible_resources": [
