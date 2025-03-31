@@ -1,5 +1,6 @@
 // Import utility functions from rangySetup
 import { initRangy, createHighlighter, deserializeRange, createFinder } from './rangySetup';
+import { highlightImage } from './imageAnnotation';
 
 // Initialize Rangy
 const rangy = initRangy();
@@ -355,25 +356,48 @@ function highlightText(text, annotationId) {
   }
 }
 
-// Function to highlight a specific annotation
+// Function to highlight an annotation based on its type
 function highlightAnnotation(annotation) {
-  // Generate a unique ID for this annotation if it doesn't have one already
-  const annotationId = annotation.id || `annotation-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  if (!annotation) return;
   
-  // Store the ID with the annotation
-  if (!annotation.id) {
-    annotation.id = annotationId;
+  try {
+    if (annotation.type === 'image') {
+      // Handle image annotations
+      highlightImageAnnotation(annotation);
+    } else {
+      // Default to text annotation (original behavior)
+      if (annotation.useRangy && annotation.domPath && annotation.domPath.rangySelection) {
+        highlightWithRangy(annotation.domPath.rangySelection, annotation.text, annotation.id);
+      } else if (annotation.domPath) {
+        highlightByDomPath(annotation.domPath, annotation.text, annotation.id);
+      } else {
+        highlightText(annotation.text, annotation.id);
+      }
+    }
+  } catch (err) {
+    console.error('Error highlighting annotation:', err);
   }
+}
 
-  if (annotation.useRangy && annotation.domPath && annotation.domPath.rangySelection) {
-    // Use Rangy serializer for highlighting
-    highlightWithRangy(annotation.domPath.rangySelection, annotation.text, annotationId);
-  } else if (annotation.domPath) {
-    // Use custom DOM path method
-    highlightByDomPath(annotation.domPath, annotation.text, annotationId);
-  } else {
-    // Fallback to text search method
-    highlightText(annotation.text, annotationId);
+// Function to highlight an image annotation
+function highlightImageAnnotation(annotation) {
+  if (!annotation || !annotation.image) return;
+  
+  try {
+    // Try to find images on the page with the same source
+    const images = document.querySelectorAll('img');
+    for (const img of images) {
+      // Compare src or different variations of the URL
+      if (img.src === annotation.image || 
+          img.src === annotation.imageData?.src ||
+          (img.alt && annotation.imageData?.alt && img.alt === annotation.imageData.alt)) {
+        // Found a matching image, highlight it
+        highlightImage(img, annotation.id);
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('Error highlighting image:', err);
   }
 }
 

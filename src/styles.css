@@ -3,36 +3,55 @@
 
 /* Highlighted text styles */
 .highlighted-text {
-  background-color: #ffff0099 !important; /* Semi-transparent yellow */
-  color: currentColor !important; /* Use the current text color instead of forcing black */
-  border-radius: 2px !important;
-  padding: 0 1px !important;
-  display: inline !important;
-  position: relative !important;
-  box-decoration-break: clone !important;
-  -webkit-box-decoration-break: clone !important;
-  z-index: 9 !important; /* Lower z-index to avoid breaking UI controls */
-  pointer-events: auto !important;
-  /* Don't affect the layout */
-  margin: 0 !important;
-  text-decoration: none !important;
+  background-color: rgba(136, 85, 255, 0.3) !important;
+  color: inherit;
+  cursor: pointer;
+  display: inline;
+  position: relative;
+  border-bottom: 1px dashed rgba(136, 85, 255, 0.7) !important;
 }
 
-/* Add a subtle animation when hovering */
 .highlighted-text:hover {
-  box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.3) !important;
-  transition: box-shadow 0.2s ease-in-out !important;
+  background-color: rgba(136, 85, 255, 0.5) !important;
 }
 
-/* Animation for scrolled-to highlights */
+/* Styles for image annotations */
+.highlighted-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  cursor: pointer;
+}
+
+.highlighted-image::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 0 3px rgba(136, 85, 255, 0.7);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.highlighted-image:hover::after {
+  box-shadow: inset 0 0 0 4px rgba(136, 85, 255, 1);
+}
+
+.highlighted-image-overlay {
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animation for newly clicked/scrolled-to annotations */
 @keyframes highlight-flash {
-  0% { background-color: #ffff0099; }
-  50% { background-color: #ffaa0099; }
-  100% { background-color: #ffff0099; }
+  0% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(136, 85, 255, 0.8); }
+  100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0); }
 }
 
 .highlight-flash {
-  animation: highlight-flash 1s ease-in-out 3;
-  box-shadow: 0 0 8px rgba(255, 170, 0, 0.8);
+  animation: highlight-flash 1.5s ease-out;
 }
 

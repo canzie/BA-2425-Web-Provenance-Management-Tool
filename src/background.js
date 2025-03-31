@@ -1,8 +1,20 @@
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
-      id: "Annotate",
+      id: "AnnotateText",
       title: "Annotate Text",
       contexts: ["selection"]
+    });
+
+    chrome.contextMenus.create({
+      id: "AnnotateImage",
+      title: "Annotate Image",
+      contexts: ["image"]
+    });
+
+    chrome.contextMenus.create({
+      id: "CaptureScreenshot",
+      title: "Capture Screenshot as Annotation",
+      contexts: ["page"]
     });
 
     chrome.contextMenus.create({
@@ -19,7 +31,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
   
   chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === "Annotate" && info.selectionText) {
+    if (info.menuItemId === "AnnotateText" && info.selectionText) {
       // Extract metadata first, then save the annotation with it
       extractPageMetadata(tab, (metadata) => {
         // Get the DOM path of the selected text using Rangy
@@ -43,12 +55,59 @@ chrome.runtime.onInstalled.addListener(() => {
                 function: serializeSelection,
               }, (results) => {
                 const customPathRange = results && results[0] && results[0].result ? results[0].result : null;
-                saveAnnotation(tab, info, metadata, customPathRange, false);
+                saveAnnotation(tab, info, metadata, customPathRange, false, 'text');
               });
             } else {
-              saveAnnotation(tab, info, metadata, serializedRange, true);
+              saveAnnotation(tab, info, metadata, serializedRange, true, 'text');
             }
           });
+        });
+      });
+    } else if (info.menuItemId === "AnnotateImage" && info.srcUrl) {
+      // Extract metadata first, then save the image annotation
+      extractPageMetadata(tab, (metadata) => {
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['dist/contentScript.js']
+        }, () => {
+          chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: serializeImageElement,
+            args: [info.srcUrl]
+          }, (results) => {
+            const imageData = results && results[0] && results[0].result ? results[0].result : null;
+            
+            if (imageData) {
+              saveAnnotation(tab, { 
+                ...info, 
+                selectionText: imageData.alt || "Image" // Use alt text as fallback text
+              }, metadata, imageData, false, 'image');
+            } else {
+              console.error("Failed to serialize image");
+            }
+          });
+        });
+      });
+    } else if (info.menuItemId === "CaptureScreenshot") {
+      // Extract metadata first, then capture a screenshot
+      extractPageMetadata(tab, (metadata) => {
+        // Capture the visible area of the tab as a screenshot
+        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (dataUrl) => {
+          if (dataUrl) {
+            const screenshotData = {
+              src: dataUrl,
+              alt: 'Screenshot of ' + tab.title,
+              width: tab.width || 0,
+              height: tab.height || 0,
+              timestamp: new Date().toISOString()
+            };
+            
+            saveAnnotation(tab, { 
+              selectionText: "Screenshot: " + tab.title || "Screenshot"
+            }, metadata, screenshotData, false, 'image');
+          } else {
+            console.error("Failed to capture screenshot");
+          }
         });
       });
     } else if (info.menuItemId === "ClearStorage") {
@@ -59,8 +118,65 @@ chrome.runtime.onInstalled.addListener(() => {
     }
   });
 
+// Function to serialize an image element
+function serializeImageElement(srcUrl) {
+  // Find the image with the matching source
+  const images = document.querySelectorAll('img');
+  let targetImage = null;
+  
+  for (const img of images) {
+    if (img.src === srcUrl) {
+      targetImage = img;
+      break;
+    }
+  }
+  
+  if (!targetImage) return null;
+  
+  try {
+    // If we can, try to capture the image as a data URL
+    // This will work for same-origin images
+    const canvas = document.createElement('canvas');
+    canvas.width = targetImage.naturalWidth;
+    canvas.height = targetImage.naturalHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(targetImage, 0, 0);
+    
+    // Try to get image data
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      
+      return {
+        src: dataUrl,
+        alt: targetImage.alt || '',
+        width: targetImage.naturalWidth,
+        height: targetImage.naturalHeight
+      };
+    } catch (e) {
+      // Fall back to just storing the URL for cross-origin images
+      return {
+        src: srcUrl,
+        alt: targetImage.alt || '',
+        width: targetImage.naturalWidth || 0,
+        height: targetImage.naturalHeight || 0
+      };
+    }
+  } catch (err) {
+    console.error('Error serializing image:', err);
+    
+    // Return basic info if we can't capture the image
+    return {
+      src: srcUrl,
+      alt: targetImage.alt || '',
+      width: 0,
+      height: 0
+    };
+  }
+}
+
 // Function to save an annotation to storage
-function saveAnnotation(tab, info, metadata, domPath, useRangy) {
+function saveAnnotation(tab, info, metadata, domPath, useRangy, annotationType = 'text') {
   chrome.storage.local.get({ savedTexts: [] }, (data) => {
     // Get the current count of annotations to use as index
     const annotationIndex = data.savedTexts.length + 1;
@@ -71,17 +187,36 @@ function saveAnnotation(tab, info, metadata, domPath, useRangy) {
     // Normalize the URL by removing any hash
     const normalizedUrl = tab.url.split('#')[0];
     
-    const newTextObject = {
-        id: annotationId,
-        title: `annotation-${annotationIndex}`,
+    // Create the base annotation object
+    const baseAnnotation = {
+      id: annotationId,
+      title: `annotation-${annotationIndex}`,
+      timestamp: new Date().toISOString(),
+      url: normalizedUrl,
+      metadata: metadata || ["sample metadata"],
+      tags: [],
+      type: annotationType // Add type field to distinguish between annotation types
+    };
+    
+    // Add type-specific fields
+    let newTextObject;
+    
+    if (annotationType === 'image') {
+      newTextObject = {
+        ...baseAnnotation,
+        image: domPath.src || info.srcUrl, // Store the image source
+        imageData: domPath,  // Store the full image data
+        text: info.selectionText || domPath.alt || "Image annotation" // Use alt text or default
+      };
+    } else {
+      // Text annotation (original type)
+      newTextObject = {
+        ...baseAnnotation,
         text: info.selectionText,
-        timestamp: new Date().toISOString(),
-        url: normalizedUrl,
-        metadata: metadata || ["sample metadata"],
-        tags: [],
         domPath: domPath,
         useRangy: useRangy
       };
+    }
       
     const newTexts = [...data.savedTexts, newTextObject];
     

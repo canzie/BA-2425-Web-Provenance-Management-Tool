@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "React Sidebar Extension",
     "version": "1.0",
-    "permissions": ["contextMenus", "storage", "sidePanel", "tabs", "activeTab", "scripting"],
+    "permissions": ["contextMenus", "storage", "sidePanel", "tabs", "activeTab", "scripting", "downloads", "clipboardWrite"],
     "host_permissions": ["<all_urls>"],
     "background": {
       "service_worker": "dist/background.js"

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { tagManager } from './TagManager';
+import AnnotationType from './components/AnnotationType';
 
 export default function AnnotationItem({
   textObject,
@@ -128,6 +129,26 @@ export default function AnnotationItem({
     }
   };
 
+  // Determine what content to show based on annotation type
+  const renderAnnotationContent = () => {
+    // Get the annotation type (default to 'text' for backwards compatibility)
+    const annotationType = textObject.type || 'text';
+    
+    if (annotationType === 'image') {
+      // For image annotations, pass the image data
+      return <AnnotationType 
+        type="image" 
+        data={textObject.image || textObject.imageData?.src} 
+      />;
+    } else {
+      // For text annotations, pass the text
+      return <AnnotationType 
+        type="text" 
+        data={textObject.text} 
+      />;
+    }
+  };
+
   return (
     <div
       key={index}
@@ -191,9 +212,9 @@ export default function AnnotationItem({
               +
             </button>
           </div>
-          <p className="w-full p-1 my-2 text-white">
-            "<strong>{textObject.text}</strong>"
-          </p>
+          
+          {/* Render the annotation content based on its type */}
+          {renderAnnotationContent()}
           
           {/* Timestamp and URL - always visible */}
           <div className="mt-2 text-xs text-gray-400">
@@ -251,35 +272,28 @@ export default function AnnotationItem({
           </div>
         </>
       ) : (
-        <>
-          <p
-            className="text-xl font-bold cursor-pointer text-white mb-3"
-            onClick={() => handleItemClick(index)}
-          >
-            {textObject.title}
-          </p>
-          <div className="flex flex-wrap items-center mb-1">
-            {textObject.tags && Array.isArray(textObject.tags) && 
-              textObject.tags.map((tagText, i) => (
-                <span key={i}>{renderTag(tagText)}</span>
-              ))
-            }
+        <div onClick={() => handleItemClick(index)}>
+          <h3 className="text-white text-lg font-bold break-words">{textObject.title || `Annotation ${index + 1}`}</h3>
+          <div className="flex flex-wrap mt-1 mb-1">
+            {textObject.tags?.map((tagText) => renderTag(tagText))}
           </div>
-          <p className="text-sm text-gray-400 truncate mt-2">
-            {textObject.text && textObject.text.length > 70 ? 
-              textObject.text.substring(0, 70) + "..." : 
-              textObject.text}
-          </p>
-          <p className="text-xs text-gray-400 truncate mt-2">
-            <a 
-              className="hover:underline break-all" 
-              href={textObject.url} 
-              onClick={(e) => handleLinkClick(e, textObject.url, textObject.id)}
-            >
-              Go to annotation
-            </a>
-          </p>
-        </>
+          
+          {/* Render read-only annotation content based on type */}
+          {renderAnnotationContent()}
+          
+          <div className="text-xs text-gray-400 mt-2">
+            <p className="break-words opacity-75">{textObject.timestamp}</p>
+            <p className="break-words opacity-75">
+              <a 
+                className="hover:underline break-all" 
+                href={textObject.url}
+                onClick={(e) => handleLinkClick(e, textObject.url, textObject.id)}
+              >
+                {textObject.url}
+              </a>
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
