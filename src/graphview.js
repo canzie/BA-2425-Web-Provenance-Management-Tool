@@ -13,6 +13,9 @@ export default function GraphView() {
     const [selectedAnnotation, setSelectedAnnotation] = useState(null);
     const [filter, setFilter] = useState("all");
     
+    // Add state for sidebar collapse
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    
     // New force control states
     const [centerForceStrength, setCenterForceStrength] = useState(1);
     const [repelForceStrength, setRepelForceStrength] = useState(-80);
@@ -25,8 +28,20 @@ export default function GraphView() {
         tags: true,
         similarTimeRange: false,
         baseLink: false,
-        metadata: false
+        metadata: false,
+        samePage: false
     });
+    
+    // Time range state
+    const [timeRange, setTimeRange] = useState(1); // Default 1 day
+    const timeRangeOptions = [
+        { value: 0.5, label: "12 hours" },
+        { value: 1, label: "1 day" },
+        { value: 7, label: "1 week" },
+        { value: 30, label: "1 month" },
+        { value: 90, label: "3 months" },
+        { value: 180, label: "6 months" }
+    ];
     
     // Load annotations from localStorage
     useEffect(() => {
@@ -114,7 +129,7 @@ export default function GraphView() {
             const newGraphData = transformAnnotationsToGraphData(annotations);
             setGraphData(newGraphData);
         }
-    }, [linkingCriteria]);
+    }, [linkingCriteria, timeRange]);
     
     // Transform annotations to graph data format
     const transformAnnotationsToGraphData = (annotations) => {
@@ -282,6 +297,46 @@ export default function GraphView() {
                         addLinks(domainNodes[i], domainNodes[j], `Same domain: ${domain}`);
                     }
                 }
+            });
+        }
+        
+        // Link by same page (exact URL match)
+        if (linkingCriteria.samePage) {
+            const pageGroups = {};
+            
+            nodes.forEach(node => {
+                if (!node.url) return;
+                
+                try {
+                    const url = new URL(node.url);
+                    // Use full URL as key for exact page matching
+                    const pageKey = url.href;
+                    
+                    if (!pageGroups[pageKey]) {
+                        pageGroups[pageKey] = [];
+                    }
+                    
+                    pageGroups[pageKey].push(node);
+                } catch (e) {
+                    console.error('Invalid URL:', node.url);
+                }
+            });
+            
+            // For each page, create a cluster with a central node
+            Object.entries(pageGroups).forEach(([pageUrl, pageNodes]) => {
+                if (pageNodes.length < 2) return;
+                
+                // Find the most important node for this page
+                const centralNode = pageNodes.reduce((max, node) => 
+                    node.importance > max.importance ? node : max
+                );
+                
+                // Connect all other nodes to the central node
+                pageNodes.forEach(node => {
+                    if (node !== centralNode) {
+                        addLinks(node, centralNode, `Same page: ${new URL(pageUrl).pathname}`);
+                    }
+                });
             });
         }
         
@@ -560,7 +615,7 @@ export default function GraphView() {
                 />
             </div>
             
-            <div className="w-[65%] h-full relative">
+            <div className={`${isSidebarCollapsed ? 'w-[80%]' : 'w-[65%]'} h-full relative transition-all duration-300`}>
                 <GraphVisualizer
                     graphData={filteredGraphData}
                     nodeSize={nodeSize}
@@ -574,7 +629,7 @@ export default function GraphView() {
                     />
                 
                 {/* Linking Criteria Menu */}
-                <div className="absolute top-4 right-4 z-10">
+                <div className="absolute top-4 right-4 z-10 transition-all duration-300">
                     <button 
                         className="bg-violet-500 text-white rounded-md py-2 px-4 shadow-lg hover:bg-violet-600 transition-colors"
                         onClick={() => setShowLinkingCriteria(!showLinkingCriteria)}
@@ -616,6 +671,15 @@ export default function GraphView() {
                                 <label className="flex items-center text-white cursor-pointer">
                                     <input 
                                         type="checkbox" 
+                                        checked={linkingCriteria.samePage} 
+                                        onChange={() => handleLinkingCriteriaChange('samePage')}
+                                        className="mr-2 accent-violet-500"
+                                    />
+                                    Same Page
+                                </label>
+                                <label className="flex items-center text-white cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
                                         checked={linkingCriteria.metadata} 
                                         onChange={() => handleLinkingCriteriaChange('metadata')}
                                         className="mr-2 accent-violet-500"
@@ -637,22 +701,68 @@ export default function GraphView() {
                 </div>
             </div>
             
-            <div className="w-[15%] h-full bg-[#363636] border-l border-gray-700 overflow-auto">
-            <GraphControls
-                nodeSize={nodeSize}
-                setNodeSize={setNodeSize}
-                clusterDistance={clusterDistance}
-                setClusterDistance={setClusterDistance}
-                centerForceStrength={centerForceStrength}
-                setCenterForceStrength={setCenterForceStrength}
-                repelForceStrength={repelForceStrength}
-                setRepelForceStrength={setRepelForceStrength}
-                linkForceStrength={linkForceStrength}
-                setLinkForceStrength={setLinkForceStrength}
-                linkDistance={linkDistance}
-                setLinkDistance={setLinkDistance}
+            <div className={`${isSidebarCollapsed ? 'w-0' : 'w-[15%]'} h-full bg-[#363636] border-l border-gray-700 overflow-hidden transition-all duration-300 relative`}>
+                <GraphControls
+                    nodeSize={nodeSize}
+                    setNodeSize={setNodeSize}
+                    clusterDistance={clusterDistance}
+                    setClusterDistance={setClusterDistance}
+                    centerForceStrength={centerForceStrength}
+                    setCenterForceStrength={setCenterForceStrength}
+                    repelForceStrength={repelForceStrength}
+                    setRepelForceStrength={setRepelForceStrength}
+                    linkForceStrength={linkForceStrength}
+                    setLinkForceStrength={setLinkForceStrength}
+                    linkDistance={linkDistance}
+                    setLinkDistance={setLinkDistance}
                 />
+                
+                {/* Toggle button */}
+                <button 
+                    className={`absolute top-1/2 -translate-y-1/2 ${isSidebarCollapsed ? 'right-0' : 'left-0'} 
+                        bg-[#363636] text-white p-2 hover:bg-[#404040] transition-colors
+                        border border-gray-700 rounded-none ${isSidebarCollapsed ? 'rounded-l-md' : 'rounded-r-md'}`}
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                >
+                    <svg 
+                        className={`w-4 h-4 transform transition-transform ${isSidebarCollapsed ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                    >
+                        <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
+                </button>
             </div>
+
+            {/* Uncollapse button - only shown when sidebar is collapsed */}
+            {isSidebarCollapsed && (
+                <button 
+                    className="fixed right-4 top-1/2 -translate-y-1/2 z-50
+                        bg-[#363636] text-white p-2 hover:bg-[#404040] transition-colors
+                        border border-gray-700 rounded-l-md shadow-lg"
+                    onClick={() => setIsSidebarCollapsed(false)}
+                >
+                    <svg 
+                        className="w-4 h-4 transform rotate-180"
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                    >
+                        <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
+                </button>
+            )}
         </div>
     );
 }
