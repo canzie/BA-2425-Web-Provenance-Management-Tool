@@ -135,29 +135,55 @@ export default function GraphView() {
     const transformAnnotationsToGraphData = (annotations) => {
         console.log("Processing annotations:", annotations);
         
-        // Create nodes from annotations (using INDEX as ID instead of title)
-        const nodes = annotations.map((annotation, index) => ({
+        // Create nodes from annotations
+        const annotationNodes = annotations.map((annotation, index) => ({
             id: `node-${index}`, // Use index-based ID for uniqueness
-            title: annotation.title || `Untitled ${index}`, // Keep title as a display property
+            type: 'annotation', // Add type property
+            title: annotation.title || `Untitled ${index}`,
             text: annotation.text,
             url: annotation.url,
-            group: Math.floor(Math.random() * 7) + 1,
+            group: Math.floor(Math.random() * 7) + 1, // Keep random group for now
             tags: annotation.tags || [],
             metadata: annotation.metadata || [],
             timestamp: annotation.timestamp,
             originalIndex: index
         }));
         
-        // Debug: Examine node tags
-        nodes.forEach(node => {
-            console.log(`Node #${node.originalIndex} "${node.title}" has tags:`, node.tags);
-        });
-        
-        // Create links based on shared tags
+        const hubNodes = [];
         const links = [];
-        
-        // Function to add links between nodes
-        const addLinks = (sourceNode, targetNode, reason, value = 1) => {
+        const hubNodeMap = {}; // Map to store hub nodes to avoid duplicates: key = type:value, value = hubNode
+
+        // Function to get or create a hub node
+        const getOrCreateHubNode = (type, value, displayValue = value) => {
+            const key = `${type}:${value}`;
+            if (!hubNodeMap[key]) {
+                const hubId = `hub-${type}-${value.replace(/[^a-zA-Z0-9]/g, '-')}`; // Sanitize ID
+                hubNodeMap[key] = {
+                    id: hubId,
+                    type: 'hub',
+                    hubType: type, // Store the type of hub (tag, domain, etc.)
+                    title: displayValue, // Display name for the hub
+                    group: 8 + (Object.keys(hubNodeMap).length % 5), // Assign a different group range for hubs
+                    originalIndex: -1 // Indicate it's not an original annotation
+                };
+                hubNodes.push(hubNodeMap[key]);
+            }
+            return hubNodeMap[key];
+        };
+
+        // Function to add links (now primarily between annotation node and hub node, OR directed annotation-to-annotation)
+        const addLink = (sourceNode, targetNode, reason, isDirected = false) => {
+             // Allow annotation-to-annotation links ONLY if isDirected is true
+             if (sourceNode.type === targetNode.type && sourceNode.type === 'annotation' && !isDirected) {
+                 console.warn(`Skipping undirected link between annotations: ${sourceNode.id} -> ${targetNode.id}`);
+                 return; 
+             }
+             // Skip hub-to-hub links for now
+             if (sourceNode.type === 'hub' && targetNode.type === 'hub') {
+                 console.warn(`Skipping link between hubs: ${sourceNode.id} -> ${targetNode.id}`);
+                 return;
+             }
+
             const existingLink = links.find(link => 
                 (link.source === sourceNode.id && link.target === targetNode.id) || 
                 (link.source === targetNode.id && link.target === sourceNode.id)
@@ -167,219 +193,148 @@ export default function GraphView() {
                 links.push({
                     source: sourceNode.id,
                     target: targetNode.id,
-                    value: value,
-                    reason: [reason]
+                    value: 1, // Initial value, could be adjusted based on relevance
+                    reason: [reason],
+                    directed: isDirected // Add directed flag to link data
                 });
             } else {
-                existingLink.value += value;
-                if (!existingLink.reason.includes(reason)) {
-                    existingLink.reason.push(reason);
-                }
+                 // Optionally increment value or add reason if linking multiple times for different reasons
+                 if (!existingLink.reason.includes(reason)) {
+                     existingLink.reason.push(reason);
+                     existingLink.value += 1; 
+                 }
             }
         };
         
+        // --- Linking Logic ---
+
         // Link by tags
         if (linkingCriteria.tags) {
-            // Create a map of normalized tag -> node IDs for efficient lookup
-            const tagToNodeMap = {};
-            
-            // Process all tags from all nodes and build the tag map
-            nodes.forEach(node => {
-                if (!node.tags || !Array.isArray(node.tags) || node.tags.length === 0) {
-                    return;
-                }
+            annotationNodes.forEach(node => {
+                if (!node.tags || !Array.isArray(node.tags) || node.tags.length === 0) return;
                 
                 node.tags.forEach(tag => {
-                    // Extract tag text, handling different possible formats
                     let tagText;
+                    if (typeof tag === 'string') tagText = tag;
+                    else if (tag && typeof tag === 'object' && tag.text) tagText = tag.text;
+                    else return;
                     
-                    if (typeof tag === 'string') {
-                        tagText = tag;
-                    } else if (tag && typeof tag === 'object' && tag.text) {
-                        tagText = tag.text;
-                    } else {
-                        return;
-                    }
-                    
-                    // Skip empty tags
                     if (!tagText || tagText.trim() === '') return;
                     
-                    // Normalize tag text (lowercase, trim)
                     const normalizedTag = tagText.toLowerCase().trim();
-                    
-                    if (!tagToNodeMap[normalizedTag]) {
-                        tagToNodeMap[normalizedTag] = [];
-                    }
-                    
-                    // Add node to this tag's list if not already there
-                    if (!tagToNodeMap[normalizedTag].includes(node)) {
-                        tagToNodeMap[normalizedTag].push(node);
-                    }
+                    const hubNode = getOrCreateHubNode('tag', normalizedTag, tagText); // Use original text for display
+                    addLink(node, hubNode, `Tag: ${tagText}`);
                 });
-            });
-            
-            // For each tag, create links between ALL nodes sharing that tag
-            Object.entries(tagToNodeMap).forEach(([tagText, tagNodes]) => {
-                if (tagNodes.length < 2) {
-                    return; // Need at least 2 nodes to create a link
-                }
-                
-                // Create a complete graph (all nodes connected to all other nodes)
-                for (let i = 0; i < tagNodes.length; i++) {
-                    for (let j = i + 1; j < tagNodes.length; j++) {
-                        addLinks(tagNodes[i], tagNodes[j], `Tag: ${tagText}`);
-                    }
-                }
             });
         }
         
-        // Link by similar time range
+        // Link by similar time range (group by date)
         if (linkingCriteria.similarTimeRange) {
-            // Group nodes by time ranges (e.g., same day)
-            const timeGroups = {};
-            
-            nodes.forEach(node => {
+            annotationNodes.forEach(node => {
                 if (!node.timestamp) return;
-                
-                // Extract date part only (YYYY-MM-DD)
                 const date = new Date(node.timestamp);
                 if (isNaN(date)) return;
                 
-                const dateStr = date.toISOString().split('T')[0];
-                
-                if (!timeGroups[dateStr]) {
-                    timeGroups[dateStr] = [];
-                }
-                
-                timeGroups[dateStr].push(node);
-            });
-            
-            // Link nodes created on the same day
-            Object.entries(timeGroups).forEach(([dateStr, timeNodes]) => {
-                if (timeNodes.length < 2) return;
-                
-                for (let i = 0; i < timeNodes.length; i++) {
-                    for (let j = i + 1; j < timeNodes.length; j++) {
-                        addLinks(timeNodes[i], timeNodes[j], `Same day: ${dateStr}`);
-                    }
-                }
+                const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                const hubNode = getOrCreateHubNode('time', dateStr, `Date: ${dateStr}`);
+                addLink(node, hubNode, `Same day: ${dateStr}`);
             });
         }
         
         // Link by base URL (domain)
         if (linkingCriteria.baseLink) {
-            // Group nodes by domain
-            const domainGroups = {};
-            
-            nodes.forEach(node => {
+            annotationNodes.forEach(node => {
                 if (!node.url) return;
-                
                 try {
                     const url = new URL(node.url);
                     const domain = url.hostname;
-                    
-                    if (!domainGroups[domain]) {
-                        domainGroups[domain] = [];
-                    }
-                    
-                    domainGroups[domain].push(node);
+                    const hubNode = getOrCreateHubNode('domain', domain, `Domain: ${domain}`);
+                    addLink(node, hubNode, `Same domain: ${domain}`);
                 } catch (e) {
-                    console.error('Invalid URL:', node.url);
-                }
-            });
-            
-            // Link nodes from the same domain
-            Object.entries(domainGroups).forEach(([domain, domainNodes]) => {
-                if (domainNodes.length < 2) return;
-                
-                for (let i = 0; i < domainNodes.length; i++) {
-                    for (let j = i + 1; j < domainNodes.length; j++) {
-                        addLinks(domainNodes[i], domainNodes[j], `Same domain: ${domain}`);
-                    }
+                    console.error('Invalid URL for domain linking:', node.url, e);
                 }
             });
         }
         
         // Link by same page (exact URL match)
         if (linkingCriteria.samePage) {
-            const pageGroups = {};
-            
-            nodes.forEach(node => {
+            annotationNodes.forEach(node => {
                 if (!node.url) return;
-                
                 try {
                     const url = new URL(node.url);
-                    // Use full URL as key for exact page matching
-                    const pageKey = url.href;
-                    
-                    if (!pageGroups[pageKey]) {
-                        pageGroups[pageKey] = [];
-                    }
-                    
-                    pageGroups[pageKey].push(node);
+                    const pageKey = url.href; // Use full URL
+                    const pagePath = url.pathname || url.hostname; // Display path or hostname
+                    const hubNode = getOrCreateHubNode('page', pageKey, `Page: ${pagePath}`);
+                    addLink(node, hubNode, `Same page: ${pagePath}`);
                 } catch (e) {
-                    console.error('Invalid URL:', node.url);
+                    console.error('Invalid URL for page linking:', node.url, e);
                 }
-            });
-            
-            // For each page, create a cluster with a central node
-            Object.entries(pageGroups).forEach(([pageUrl, pageNodes]) => {
-                if (pageNodes.length < 2) return;
-                
-                // Find the most important node for this page
-                const centralNode = pageNodes.reduce((max, node) => 
-                    node.importance > max.importance ? node : max
-                );
-                
-                // Connect all other nodes to the central node
-                pageNodes.forEach(node => {
-                    if (node !== centralNode) {
-                        addLinks(node, centralNode, `Same page: ${new URL(pageUrl).pathname}`);
-                    }
-                });
             });
         }
         
         // Link by shared metadata
         if (linkingCriteria.metadata) {
-            // Create a map of metadata -> nodes
-            const metadataToNodeMap = {};
-            
-            nodes.forEach(node => {
-                if (!node.metadata || !Array.isArray(node.metadata) || node.metadata.length === 0) {
-                    return;
-                }
+            annotationNodes.forEach(node => {
+                if (!node.metadata || !Array.isArray(node.metadata) || node.metadata.length === 0) return;
                 
                 node.metadata.forEach(meta => {
-                    if (!meta || meta.trim() === '') return;
+                    if (!meta || typeof meta !== 'string' || meta.trim() === '') return;
                     
                     const normalizedMeta = meta.toLowerCase().trim();
-                    
-                    if (!metadataToNodeMap[normalizedMeta]) {
-                        metadataToNodeMap[normalizedMeta] = [];
-                    }
-                    
-                    if (!metadataToNodeMap[normalizedMeta].includes(node)) {
-                        metadataToNodeMap[normalizedMeta].push(node);
-                    }
+                    const hubNode = getOrCreateHubNode('metadata', normalizedMeta, `Meta: ${meta}`);
+                    addLink(node, hubNode, `Shared metadata: ${meta}`);
                 });
             });
-            
-            // Link nodes with shared metadata
-            Object.entries(metadataToNodeMap).forEach(([metaText, metaNodes]) => {
-                if (metaNodes.length < 2) return;
-                
-                for (let i = 0; i < metaNodes.length; i++) {
-                    for (let j = i + 1; j < metaNodes.length; j++) {
-                        addLinks(metaNodes[i], metaNodes[j], `Shared metadata: ${metaText}`);
-                    }
-                }
-            });
         }
+
+        // --- Add Directed Links Based on Text References ---
+        const referenceRegex = /#(\w+)/g; // Regex to find #word references
+
+        annotationNodes.forEach(sourceNode => {
+            if (!sourceNode.text) return; // Skip if no text
+
+            let match;
+            while ((match = referenceRegex.exec(sourceNode.text)) !== null) {
+                const referenceWord = match[1].toLowerCase(); // Get the word after #, lowercase for matching
+                
+                // Find target nodes (other annotations) matching the reference word
+                annotationNodes.forEach(targetNode => {
+                    if (sourceNode.id === targetNode.id) return; // Don't link to self
+
+                    let matched = false;
+                    let matchReason = '';
+
+                    // Match by title (case-insensitive)
+                    if (targetNode.title && targetNode.title.toLowerCase() === referenceWord) {
+                        matched = true;
+                        matchReason = `Reference to title: #${match[1]}`;
+                    }
+                    // Match by tags (case-insensitive)
+                    else if (targetNode.tags && targetNode.tags.some(tag => {
+                        const tagText = (typeof tag === 'string' ? tag : tag.text)?.toLowerCase();
+                        return tagText === referenceWord;
+                    })) {
+                        matched = true;
+                        matchReason = `Reference to tag: #${match[1]}`;
+                    }
+
+                    // If matched, add a directed link
+                    if (matched) {
+                         // Use the existing addLink function, but ensure it allows annotation-to-annotation links for references
+                         // We need to slightly modify addLink or create a new one for this.
+                         // Let's modify addLink for simplicity for now.
+                         addLink(sourceNode, targetNode, matchReason, true); // Add a flag to indicate directed
+                    }
+                });
+            }
+        });
+
+        // Combine annotation nodes and hub nodes
+        const allNodes = [...annotationNodes, ...hubNodes];
         
-        console.log(`Created graph with ${nodes.length} nodes and ${links.length} links:`, links);
+        console.log(`Created graph with ${allNodes.length} nodes (${annotationNodes.length} annotations, ${hubNodes.length} hubs) and ${links.length} links.`);
         
-        return { nodes, links };
+        return { nodes: allNodes, links };
     };
     
     // Extract all unique tags from annotations

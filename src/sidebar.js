@@ -9,6 +9,7 @@ export default function Sidebar() {
   const [editableTags, setEditableTags] = useState([]);
   const [editableMetadata, setEditableMetadata] = useState("");
   const [currentTabUrl, setCurrentTabUrl] = useState("");
+  const [editableNotes, setEditableNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [savingStatus, setSavingStatus] = useState(""); // For showing save status
@@ -67,6 +68,7 @@ export default function Sidebar() {
       
       // Handle metadata
       setEditableMetadata(item.metadata ? item.metadata.join(", ") : "");
+      setEditableNotes(item.notes || "");
     }
   };
 
@@ -116,7 +118,8 @@ export default function Sidebar() {
         ...newSavedTexts[index],
         title: editableTitle || "Untitled",
         tags: processedTags,
-        metadata: processedMetadata
+        metadata: processedMetadata,
+        notes: editableNotes
       };
       
       // Update local state first for immediate feedback
@@ -202,6 +205,8 @@ export default function Sidebar() {
                 setEditableTags={setEditableTags}
                 editableMetadata={editableMetadata}
                 setEditableMetadata={setEditableMetadata}
+                editableNotes={editableNotes}
+                setEditableNotes={setEditableNotes}
                 handleSave={handleSave}
                 handleDelete={handleDelete}
               />

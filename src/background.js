@@ -195,7 +195,8 @@ function saveAnnotation(tab, info, metadata, domPath, useRangy, annotationType =
       url: normalizedUrl,
       metadata: metadata || ["sample metadata"],
       tags: [],
-      type: annotationType // Add type field to distinguish between annotation types
+      type: annotationType, 
+      notes: "" 
     };
     
     // Add type-specific fields

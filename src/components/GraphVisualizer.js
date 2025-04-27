@@ -111,11 +111,24 @@ export default function GraphVisualizer({
             .on("tick", () => {
                 boundaryForce(); // Apply boundary constraints
                 
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
+                // Update positions for links with arrows
+                link.each(function(d) {
+                     const sourceX = d.source.x;
+                     const sourceY = d.source.y;
+                     const targetX = d.target.x;
+                     const targetY = d.target.y;
+                     const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
+                     
+                     const targetRadius = (d.target.type === 'hub' ? nodeSize * 2.5 : nodeSize) + 2; // Target node radius + arrow offset
+                     const arrowTargetX = targetX - targetRadius * Math.cos(angle);
+                     const arrowTargetY = targetY - targetRadius * Math.sin(angle);
+ 
+                     d3.select(this)
+                         .attr("x1", sourceX)
+                         .attr("y1", sourceY)
+                         .attr("x2", arrowTargetX) // End line slightly before node edge
+                         .attr("y2", arrowTargetY);
+                 });
                     
                 node
                     .attr("cx", d => d.x)
@@ -129,15 +142,33 @@ export default function GraphVisualizer({
         // Store simulation reference for updates
         simulationRef.current = simulation;
             
+        // Define arrow markers for directed links
+        svg.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('viewBox', '-0 -5 10 10') // Coordinate system for marker
+            .attr('refX', 8) // Position arrowhead relative to end of line
+            .attr('refY', 0)
+            .attr('orient', 'auto') // Orient arrow with line direction
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('xoverflow', 'visible')
+            .append('svg:path')
+            .attr('d', 'M 0,-5 L 10 ,0 L 0,5') // Path for the arrow shape
+            .attr('fill', '#999') // Arrow color
+            .style('stroke','none');
+
         // Draw links
         const link = g.append("g")
             .selectAll("line")
             .data(filteredData.links)
             .enter()
             .append("line")
-            .attr("stroke", "#4C5D9E")
+             // Style directed links differently
+            .attr("stroke", d => d.directed ? "#999" : "#4C5D9E") 
             .attr("stroke-opacity", 0.6)
-            .attr("stroke-width", 1);
+            .attr("stroke-width", d => d.directed ? 1.5 : 1)
+             // Add arrowhead marker only to directed links
+            .attr('marker-end', d => d.directed ? 'url(#arrowhead)' : 'none');
             
         // Draw nodes
         const node = g.append("g")
@@ -145,10 +176,26 @@ export default function GraphVisualizer({
             .data(filteredData.nodes)
             .enter()
             .append("circle")
-            .attr("r", d => d.size || nodeSize)
+            .attr("r", d => {
+                 // Make hub nodes slightly larger
+                 return d.type === 'hub' ? nodeSize * 2.5 : nodeSize;
+            })
             .attr("fill", d => {
+                // Different color scheme for hub nodes
+                if (d.type === 'hub') {
+                    // Color hubs based on their type (tag, domain, etc.)
+                    switch (d.hubType) {
+                        case 'tag': return '#FF8C00'; // Dark Orange
+                        case 'time': return '#1E90FF'; // Dodger Blue
+                        case 'domain': return '#32CD32'; // Lime Green
+                        case 'page': return '#FFD700'; // Gold
+                        case 'metadata': return '#9370DB'; // Medium Purple
+                        default: return '#A9A9A9'; // Dark Gray
+                    }
+                }
+                
+                // Existing logic for annotation nodes
                 if (d.tags && d.tags.length > 0) {
-                    // Generate color based on first tag
                     const tag = d.tags[0];
                     const tagText = tag.text || tag;
                     const hashCode = tagText.split('').reduce((a, b) => {
@@ -185,7 +232,7 @@ export default function GraphVisualizer({
                 
         // Add tooltips for nodes (showing full title on hover)
         node.append("title")
-            .text(d => d.id);
+            .text(d => d.title);
                 
         // Add labels to nodes
         const labels = g.append("g")
@@ -193,9 +240,14 @@ export default function GraphVisualizer({
             .data(filteredData.nodes)
             .enter()
             .append("text")
-            .text(d => d.id.length > 20 ? d.title.substring(0, 20) + "..." : d.title)
+             // Display the title for both node types
+            .text(d => {
+                 const title = d.title || ''; // Ensure title exists
+                 // Truncate long titles (especially for hub nodes like URLs)
+                 return title.length > 25 ? title.substring(0, 22) + "..." : title;
+             })
             .attr("font-size", "10px")
-            .attr("dx", 12)
+            .attr("dx", d => d.type === 'hub' ? nodeSize * 2.5 + 3 : nodeSize + 3) // Adjusted label position based on new node size
             .attr("dy", 4)
             .attr("fill", "#FFFFFF");
         

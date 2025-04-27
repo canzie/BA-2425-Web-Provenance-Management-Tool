@@ -14,13 +14,16 @@ export default function AnnotationItem({
   editableMetadata,
   setEditableMetadata,
   handleSave,
-  handleDelete
+  handleDelete,
+  editableNotes,
+  setEditableNotes
 }) {
   const [newTag, setNewTag] = useState("");
   const [newTagColor, setNewTagColor] = useState("#ffffff");
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
 
   const handleNewTagChange = (e) => {
     const value = e.target.value;
@@ -251,6 +254,23 @@ export default function AnnotationItem({
               />
             </div>
           )}
+          
+          {/* Notes section */}
+          <div className="mt-2">
+            <label className="block text-sm text-white mb-1">Notes:</label>
+            <textarea
+              value={editableNotes}
+              onChange={(e) => {
+                if (typeof setEditableNotes === 'function') {
+                  setEditableNotes(e.target.value);
+                } else {
+                  console.error('setEditableNotes is not a function inside onChange!', typeof setEditableNotes);
+                }
+              }}
+              className="w-full p-1 mb-1 border border-gray-400 text-white bg-neutral-800 rounded-md break-words h-20 resize-y"
+              placeholder="Add notes here..."
+            />
+          </div>
           
           <div className="border-t border-gray-600 mt-4 pt-2 flex space-x-2">
             <button

@@ -23,6 +23,7 @@ export default function AnnotationsList({
     const [editableTitle, setEditableTitle] = useState("");
     const [editableTags, setEditableTags] = useState([]);
     const [editableMetadata, setEditableMetadata] = useState("");
+    const [editableNotes, setEditableNotes] = useState("");
     
     // Add state for view modes and tag hierarchy
     const [expandedTags, setExpandedTags] = useState({});
@@ -40,7 +41,6 @@ export default function AnnotationsList({
     
     // Filter annotations based on filter and search
     const getFilteredAnnotations = () => {
-        console.log("AnnotationsList getFilteredAnnotations - annotations:", annotations);
         
         if (!annotations || annotations.length === 0) {
             console.log("No annotations available");
@@ -97,6 +97,7 @@ export default function AnnotationsList({
                     setEditableTitle(annotation.title || "");
                     setEditableTags(Array.isArray(annotation.tags) ? annotation.tags : []);
                     setEditableMetadata(Array.isArray(annotation.metadata) ? annotation.metadata.join(", ") : "");
+                    setEditableNotes(annotation.notes || "");
                 } else {
                     console.error("No annotation found at index:", index);
                 }
@@ -163,7 +164,8 @@ export default function AnnotationsList({
                 ...newAnnotations[annotationIndex],
                 title: editableTitle || "Untitled",
                 tags: processedTags,
-                metadata: processedMetadata
+                metadata: processedMetadata,
+                notes: editableNotes
             };
             
             // Update in chrome storage with callback to handle errors
@@ -478,6 +480,8 @@ export default function AnnotationsList({
                                                     setEditableTags={setEditableTags}
                                                     editableMetadata={editableMetadata}
                                                     setEditableMetadata={setEditableMetadata}
+                                                    editableNotes={editableNotes}
+                                                    setEditableNotes={setEditableNotes}
                                                     handleSave={handleSave}
                                                     handleDelete={handleDelete}
                                                 />
@@ -503,6 +507,8 @@ export default function AnnotationsList({
                                 setEditableTags={setEditableTags}
                                 editableMetadata={editableMetadata}
                                 setEditableMetadata={setEditableMetadata}
+                                editableNotes={editableNotes}
+                                setEditableNotes={setEditableNotes}
                                 handleSave={handleSave}
                                 handleDelete={handleDelete}
                             />
